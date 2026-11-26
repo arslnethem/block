@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.SystemClock;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.view.WindowManager;
@@ -29,11 +30,14 @@ import java.nio.ByteBuffer;
 public class ScreenCaptureService extends Service {
 
     private static final String CHANNEL_ID = "block_blast_capture";
+
     private MediaProjection projection;
     private VirtualDisplay virtualDisplay;
     private ImageReader imageReader;
     private HandlerThread handlerThread;
     private Handler handler;
+
+    private long lastFrameTime = 0;
 
     @Override
     public void onCreate() {
@@ -48,11 +52,21 @@ public class ScreenCaptureService extends Service {
             return START_NOT_STICKY;
         }
 
-        Notification notification = new Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("Block Blast ekran okuyucu")
-            .setContentText("Ekran paylaşımı etkin")
-            .setSmallIcon(android.R.drawable.ic_menu_view)
-            .build();
+        Notification notification;
+
+        if (Build.VERSION.SDK_INT >= 26) {
+            notification = new Notification.Builder(this, CHANNEL_ID)
+                .setContentTitle("Block Blast ekran okuyucu")
+                .setContentText("Ekran paylaşımı etkin")
+                .setSmallIcon(android.R.drawable.ic_menu_view)
+                .build();
+        } else {
+            notification = new Notification.Builder(this)
+                .setContentTitle("Block Blast ekran okuyucu")
+                .setContentText("Ekran paylaşımı etkin")
+                .setSmallIcon(android.R.drawable.ic_menu_view)
+                .build();
+        }
 
         if (Build.VERSION.SDK_INT >= 29) {
             startForeground(
@@ -79,7 +93,13 @@ public class ScreenCaptureService extends Service {
 
         projection = manager.getMediaProjection(resultCode, resultData);
 
+        if (projection == null) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
         startCapture();
+
         return START_NOT_STICKY;
     }
 
@@ -92,14 +112,11 @@ public class ScreenCaptureService extends Service {
 
     private void startCapture() {
         DisplayMetrics metrics = new DisplayMetrics();
-        WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
 
-        if (Build.VERSION.SDK_INT >= 30) {
-            android.view.Display display = wm.getDefaultDisplay();
-            display.getRealMetrics(metrics);
-        } else {
-            wm.getDefaultDisplay().getRealMetrics(metrics);
-        }
+        WindowManager wm =
+            (WindowManager) getSystemService(WINDOW_SERVICE);
+
+        wm.getDefaultDisplay().getRealMetrics(metrics);
 
         int width = metrics.widthPixels;
         int height = metrics.heightPixels;
@@ -107,55 +124,110 @@ public class ScreenCaptureService extends Service {
 
         handlerThread = new HandlerThread("BlockBlastCapture");
         handlerThread.start();
+
         handler = new Handler(handlerThread.getLooper());
 
         imageReader = ImageReader.newInstance(
-            width, height, PixelFormat.RGBA_8888, 2
+            width,
+            height,
+            PixelFormat.RGBA_8888,
+            2
         );
 
         imageReader.setOnImageAvailableListener(reader -> {
             Image image = null;
+            Bitmap bitmap = null;
+            Bitmap cropped = null;
 
             try {
                 image = reader.acquireLatestImage();
+
                 if (image == null) return;
 
+                long now = SystemClock.elapsedRealtime();
+
+                if (now - lastFrameTime < 500) {
+                    return;
+                }
+
+                lastFrameTime = now;
+
                 Image.Plane plane = image.getPlanes()[0];
+
                 ByteBuffer buffer = plane.getBuffer();
 
                 int pixelStride = plane.getPixelStride();
                 int rowStride = plane.getRowStride();
-                int rowPadding = rowStride - pixelStride * width;
 
-                Bitmap bitmap = Bitmap.createBitmap(
+                int rowPadding =
+                    rowStride - pixelStride * width;
+
+                bitmap = Bitmap.createBitmap(
                     width + rowPadding / pixelStride,
                     height,
                     Bitmap.Config.ARGB_8888
                 );
 
+                buffer.rewind();
                 bitmap.copyPixelsFromBuffer(buffer);
 
-                Bitmap cropped = Bitmap.createBitmap(
-                    bitmap, 0, 0, width, height
+                cropped = Bitmap.createBitmap(
+                    bitmap,
+                    0,
+                    0,
+                    width,
+                    height
                 );
 
-                ByteArrayOutputStream output = new ByteArrayOutputStream();
-                cropped.compress(Bitmap.CompressFormat.JPEG, 65, output);
+                ByteArrayOutputStream output =
+                    new ByteArrayOutputStream();
+
+                cropped.compress(
+                    Bitmap.CompressFormat.JPEG,
+                    50,
+                    output
+                );
 
                 String encoded = Base64.encodeToString(
-                    output.toByteArray(), Base64.NO_WRAP
+                    output.toByteArray(),
+                    Base64.NO_WRAP
                 );
 
                 ScreenCapturePlugin.sendFrame(encoded);
 
-                bitmap.recycle();
-                cropped.recycle();
-
-            } catch (Exception ignored) {
+            } catch (Exception error) {
+                android.util.Log.e(
+                    "BlockBlastCapture",
+                    "Görüntü işleme hatası",
+                    error
+                );
             } finally {
-                if (image != null) image.close();
+                if (cropped != null && !cropped.isRecycled()) {
+                    cropped.recycle();
+                }
+
+                if (bitmap != null && !bitmap.isRecycled()) {
+                    bitmap.recycle();
+                }
+
+                if (image != null) {
+                    image.close();
+                }
             }
         }, handler);
+
+        // Android 14 ve üzeri için callback,
+        // VirtualDisplay oluşturulmadan önce kaydedilmelidir.
+        projection.registerCallback(
+            new MediaProjection.Callback() {
+                @Override
+                public void onStop() {
+                    stopCapture();
+                    stopSelf();
+                }
+            },
+            handler
+        );
 
         virtualDisplay = projection.createVirtualDisplay(
             "BlockBlastScreen",
@@ -167,23 +239,16 @@ public class ScreenCaptureService extends Service {
             null,
             handler
         );
-
-        projection.registerCallback(new MediaProjection.Callback() {
-            @Override
-            public void onStop() {
-                stopCapture();
-                stopSelf();
-            }
-        }, handler);
     }
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                "Ekran yakalama",
-                NotificationManager.IMPORTANCE_LOW
-            );
+            NotificationChannel channel =
+                new NotificationChannel(
+                    CHANNEL_ID,
+                    "Ekran yakalama",
+                    NotificationManager.IMPORTANCE_LOW
+                );
 
             NotificationManager manager =
                 getSystemService(NotificationManager.class);
