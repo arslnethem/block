@@ -261,6 +261,8 @@
     #scanCanvas {
       width: 100%;
       height: auto;
+      max-height: 70vh;
+      object-fit: contain;
       display: block;
       touch-action: none;
     }
@@ -333,7 +335,6 @@
   <div id="tab-solver" class="tab-view" style="display:flex; flex-direction:column; gap:12px;">
 
     <div class="card">
-
       <div class="board-wrap">
         <div id="board" class="board"></div>
       </div>
@@ -352,7 +353,6 @@
         <button class="primary" onclick="showGhostOverlay()">Hayalet Ekranı Göster</button>
         <button class="warn" onclick="hideGhostOverlay()">Hayalet Ekranı Kapat</button>
       </div>
-
     </div>
 
     <div id="solutionCard" class="card hidden">
@@ -381,7 +381,6 @@
   <div id="tab-scanner" class="tab-view hidden" style="display:flex; flex-direction:column; gap:12px;">
 
     <div class="card">
-
       <div style="font-weight:800; margin-bottom:6px;">
         Ekran Okuyucu (Canlı / Ekran Görüntüsü)
       </div>
@@ -417,10 +416,8 @@
           Ekrandan Oku & Çöz
         </button>
       </div>
-
     </div>
   </div>
-
 </div>
 
 <nav class="bottom-nav">
@@ -433,7 +430,6 @@
 </nav>
 
 <script>
-
 const SHAPES = [
   [[1]], [[1,1]], [[1],[1]], [[1,1,1]], [[1],[1],[1]],
   [[1,1,1,1]], [[1],[1],[1],[1]], [[1,1,1,1,1]], [[1],[1],[1],[1],[1]],
@@ -471,7 +467,6 @@ function switchTab(tab) {
 function renderBoard() {
   const el = document.getElementById('board');
   el.innerHTML = '';
-
   const overlay = {};
 
   if (bestPlan) {
@@ -486,7 +481,6 @@ function renderBoard() {
     for (let c = 0; c < 8; c++) {
       const cell = document.createElement('div');
       cell.className = 'cell';
-
       const stepNum = overlay[`${r},${c}`];
 
       if (stepNum) {
@@ -523,16 +517,13 @@ window.addEventListener('pointerup', () => {
 
 function drawMiniShape(container, shape) {
   container.innerHTML = '';
-
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 5; c++) {
       const d = document.createElement('div');
       d.className = 'mini-cell';
-
       if (shape && shape[r] && shape[r][c]) {
         d.classList.add('on');
       }
-
       container.appendChild(d);
     }
   }
@@ -545,7 +536,6 @@ function renderSlots() {
   hand.forEach((shape, i) => {
     const slot = document.createElement('div');
     slot.className = 'slot' + (activeSlot === i ? ' active' : '');
-
     slot.onclick = () => {
       activeSlot = i;
       renderSlots();
@@ -557,7 +547,6 @@ function renderSlots() {
 
     const grid = document.createElement('div');
     grid.className = 'mini-grid';
-
     drawMiniShape(grid, shape);
 
     slot.appendChild(title);
@@ -573,12 +562,9 @@ function renderCatalog() {
   SHAPES.forEach((shape) => {
     const item = document.createElement('div');
     item.className = 'cat-item';
-
     const grid = document.createElement('div');
     grid.className = 'mini-grid';
-
     drawMiniShape(grid, shape);
-
     item.appendChild(grid);
 
     item.onclick = () => {
@@ -599,14 +585,12 @@ function canPlace(b, shape, r0, c0) {
       if (shape[r][c]) {
         const nr = r0 + r;
         const nc = c0 + c;
-
         if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8 || b[nr][nc]) {
           return false;
         }
       }
     }
   }
-
   return true;
 }
 
@@ -627,27 +611,20 @@ function placeAndClear(b, shape, r0, c0) {
   const fullCols = [];
 
   for (let r = 0; r < 8; r++) {
-    if (nb[r].every(v => v === 1)) {
-      fullRows.push(r);
-    }
+    if (nb[r].every(v => v === 1)) fullRows.push(r);
   }
 
   for (let c = 0; c < 8; c++) {
     let ok = true;
-
     for (let r = 0; r < 8; r++) {
       if (!nb[r][c]) ok = false;
     }
-
     if (ok) fullCols.push(c);
   }
 
   fullRows.forEach(r => nb[r].fill(0));
-
   fullCols.forEach(c => {
-    for (let r = 0; r < 8; r++) {
-      nb[r][c] = 0;
-    }
+    for (let r = 0; r < 8; r++) nb[r][c] = 0;
   });
 
   return {
@@ -666,14 +643,11 @@ function evaluateBoard(b) {
     for (let c = 0; c < 8; c++) {
       if (!b[r][c]) {
         empty++;
-
         let blocked = 0;
-
         if (r === 0 || b[r-1][c]) blocked++;
         if (r === 7 || b[r+1][c]) blocked++;
         if (c === 0 || b[r][c-1]) blocked++;
         if (c === 7 || b[r][c+1]) blocked++;
-
         if (blocked === 4) holes++;
       }
 
@@ -702,52 +676,27 @@ function solveBest() {
     for (let r0 = 0; r0 <= 8 - s0.length; r0++) {
       for (let c0 = 0; c0 <= 8 - s0[0].length; c0++) {
         if (!canPlace(board, s0, r0, c0)) continue;
-
         const res0 = placeAndClear(board, s0, r0, c0);
 
         for (let r1 = 0; r1 <= 8 - s1.length; r1++) {
           for (let c1 = 0; c1 <= 8 - s1[0].length; c1++) {
             if (!canPlace(res0.board, s1, r1, c1)) continue;
-
             const res1 = placeAndClear(res0.board, s1, r1, c1);
 
             for (let r2 = 0; r2 <= 8 - s2.length; r2++) {
               for (let c2 = 0; c2 <= 8 - s2[0].length; c2++) {
                 if (!canPlace(res1.board, s2, r2, c2)) continue;
-
                 const res2 = placeAndClear(res1.board, s2, r2, c2);
 
-                const totalCleared =
-                  res0.cleared + res1.cleared + res2.cleared;
-
-                const score =
-                  evaluateBoard(res2.board) + totalCleared * 95;
+                const totalCleared = res0.cleared + res1.cleared + res2.cleared;
+                const score = evaluateBoard(res2.board) + totalCleared * 95;
 
                 if (score > bestScore) {
                   bestScore = score;
-
                   winner = [
-                    {
-                      slot: p[0],
-                      r: r0,
-                      c: c0,
-                      cleared: res0.cleared,
-                      cells: res0.cells
-                    },
-                    {
-                      slot: p[1],
-                      r: r1,
-                      c: c1,
-                      cleared: res1.cleared,
-                      cells: res1.cells
-                    },
-                    {
-                      slot: p[2],
-                      r: r2,
-                      c: c2,
-                      cleared: res2.cleared,
-                      cells: res2.cells
-                    }
+                    { slot: p[0], r: r0, c: c0, cleared: res0.cleared, cells: res0.cells },
+                    { slot: p[1], r: r1, c: c1, cleared: res1.cleared, cells: res1.cells },
+                    { slot: p[2], r: r2, c: c2, cleared: res2.cleared, cells: res2.cells }
                   ];
                 }
               }
@@ -759,9 +708,7 @@ function solveBest() {
   }
 
   if (!winner) {
-    document.getElementById('statusText').textContent =
-      'Bu 3 blok için geçerli hamle bulunamadı!';
-
+    document.getElementById('statusText').textContent = 'Bu 3 blok için geçerli hamle bulunamadı!';
     bestPlan = null;
     renderBoard();
     return;
@@ -772,56 +719,39 @@ function solveBest() {
 
   const list = document.getElementById('stepsList');
   list.innerHTML = '';
-
   const cols = 'ABCDEFGH';
 
   winner.forEach((step, i) => {
     const div = document.createElement('div');
     div.className = 'step-item';
-
     div.innerHTML =
       `<span><b>${i+1}. Adım:</b> Blok ${step.slot + 1} → <b>${cols[step.c]}${step.r + 1}</b></span>
        <span>${step.cleared > 0 ? '+' + step.cleared + ' Satır/Sütun' : ''}</span>`;
-
     list.appendChild(div);
   });
 
   document.getElementById('solutionCard').classList.remove('hidden');
-
-  document.getElementById('statusText').textContent =
-    'En yüksek puanlı 3 hamle hesaplandı!';
+  document.getElementById('statusText').textContent = 'En yüksek puanlı 3 hamle hesaplandı!';
 }
 
 function applySolution() {
   if (!bestPlan) return;
 
   bestPlan.forEach(step => {
-    const res = placeAndClear(
-      board,
-      hand[step.slot],
-      step.r,
-      step.c
-    );
-
+    const res = placeAndClear(board, hand[step.slot], step.r, step.c);
     board = res.board;
   });
 
   bestPlan = null;
-
   document.getElementById('solutionCard').classList.add('hidden');
-
   renderBoard();
-
-  document.getElementById('statusText').textContent =
-    'Hamleler uygulandı. Yeni 3 bloğu seçin.';
+  document.getElementById('statusText').textContent = 'Hamleler uygulandı. Yeni 3 bloğu seçin.';
 }
 
 function clearBoard() {
   board = Array.from({length: 8}, () => Array(8).fill(0));
   bestPlan = null;
-
   document.getElementById('solutionCard').classList.add('hidden');
-
   renderBoard();
 }
 
@@ -840,17 +770,10 @@ let boardBox = {
 };
 
 function drawScanOverlay() {
-  ctx.fillStyle = '#020617';
-  ctx.fillRect(0, 0, scanCanvas.width, scanCanvas.height);
+  ctx.clearRect(0, 0, scanCanvas.width, scanCanvas.height);
 
   if (loadedImg) {
-    ctx.drawImage(
-      loadedImg,
-      0,
-      0,
-      scanCanvas.width,
-      scanCanvas.height
-    );
+    ctx.drawImage(loadedImg, 0, 0, scanCanvas.width, scanCanvas.height);
   }
 
   const bx = boardBox.x * scanCanvas.width;
@@ -859,24 +782,20 @@ function drawScanOverlay() {
   const bh = boardBox.h * scanCanvas.height;
 
   ctx.strokeStyle = '#38bdf8';
-  ctx.lineWidth = 3;
+  ctx.lineWidth = Math.max(3, scanCanvas.width * 0.005);
   ctx.strokeRect(bx, by, bw, bh);
 }
 
 function loadScreenshot(e) {
   const file = e.target.files[0];
-
   if (!file) return;
 
   const img = new Image();
 
   img.onload = () => {
     loadedImg = img;
-
-    scanCanvas.height = Math.round(
-      scanCanvas.width * (img.height / img.width)
-    );
-
+    scanCanvas.width = img.naturalWidth || img.width;
+    scanCanvas.height = img.naturalHeight || img.height;
     drawScanOverlay();
   };
 
@@ -885,8 +804,7 @@ function loadScreenshot(e) {
 
 async function startScreenCapture() {
   try {
-    const ScreenCapture =
-      window.Capacitor?.Plugins?.ScreenCapture;
+    const ScreenCapture = window.Capacitor?.Plugins?.ScreenCapture;
 
     if (!ScreenCapture) {
       alert('Android ekran yakalama eklentisi bulunamadı. APK yeniden derlenmelidir.');
@@ -900,6 +818,11 @@ async function startScreenCapture() {
 
       img.onload = () => {
         loadedImg = img;
+
+        // DÜZELTME: Canlı görüntünün gerçek en-boy oranını koru.
+        scanCanvas.width = img.naturalWidth || img.width;
+        scanCanvas.height = img.naturalHeight || img.height;
+
         drawScanOverlay();
       };
 
@@ -961,9 +884,7 @@ async function hideGhostOverlay() {
     }
 
     await overlay.hide();
-
-    document.getElementById('statusText').textContent =
-      'Hayalet ekran kapatıldı.';
+    document.getElementById('statusText').textContent = 'Hayalet ekran kapatıldı.';
 
   } catch (err) {
     alert('Hayalet ekran kapatılamadı: ' + err.message);
@@ -974,17 +895,11 @@ async function hideGhostOverlay() {
 
 function analyzeScreenAndSolve() {
   if (!loadedImg) {
-    alert('Önce bir ekran görüntüsü seçin veya canlı ekran okumayı başlatın.');
+    alert('Önce ekran görüntüsü seçin veya canlı ekran okumayı başlatın.');
     return;
   }
 
-  ctx.drawImage(
-    loadedImg,
-    0,
-    0,
-    scanCanvas.width,
-    scanCanvas.height
-  );
+  ctx.drawImage(loadedImg, 0, 0, scanCanvas.width, scanCanvas.height);
 
   const bx = boardBox.x * scanCanvas.width;
   const by = boardBox.y * scanCanvas.height;
@@ -995,22 +910,15 @@ function analyzeScreenAndSolve() {
     for (let c = 0; c < 8; c++) {
       const px = Math.floor(bx + c * cw + cw * 0.5);
       const py = Math.floor(by + r * ch + ch * 0.5);
-
       const data = ctx.getImageData(px, py, 1, 1).data;
-
-      const brightness =
-        (data[0] + data[1] + data[2]) / 3;
-
+      const brightness = (data[0] + data[1] + data[2]) / 3;
       board[r][c] = brightness > 75 ? 1 : 0;
     }
   }
 
   bestPlan = null;
-
   drawScanOverlay();
-
   switchTab('solver');
-
   solveBest();
 }
 
@@ -1019,7 +927,6 @@ if ('serviceWorker' in navigator) {
 }
 
 init();
-
 </script>
 </body>
 </html>
