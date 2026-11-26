@@ -38,6 +38,53 @@ jobs:
       - name: Add Android platform
         run: cd "block blast apk" && npx cap add android
 
+      - name: Install native screen capture files
+        run: |
+          cd "block blast apk"
+
+          PACKAGE_DIR="android/app/src/main/java/com/blockblast/aisolver"
+          mkdir -p "$PACKAGE_DIR"
+
+          cp native/android/ScreenCapturePlugin.java "$PACKAGE_DIR/"
+          cp native/android/ScreenCaptureService.java "$PACKAGE_DIR/"
+          cp native/android/MainActivity.java "$PACKAGE_DIR/"
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          content = manifest.read_text()
+
+          permissions = [
+              '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
+              '<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />'
+          ]
+
+          for permission in permissions:
+              if permission not in content:
+                  content = content.replace(
+                      '<application',
+                      permission + '\n    <application',
+                      1
+                  )
+
+          service = """
+              <service
+                  android:name="com.blockblast.aisolver.ScreenCaptureService"
+                  android:exported="false"
+                  android:foregroundServiceType="mediaProjection" />
+          """
+
+          if "com.blockblast.aisolver.ScreenCaptureService" not in content:
+              content = content.replace(
+                  '</application>',
+                  service + '\n    </application>',
+                  1
+              )
+
+          manifest.write_text(content)
+          PY
+
       - name: Sync Android
         run: cd "block blast apk" && npx cap sync android
 
