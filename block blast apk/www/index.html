@@ -891,6 +891,190 @@ async function hideGhostOverlay() {
   }
 }
 
+// OTOMATİK 3 PARÇA ALGILAMA
+
+// Parçaların bulunduğu ekran bölgesi.
+// İlk değerler başlangıç ayarıdır; ekran görüntüsüne göre kalibre edilebilir.
+const trayBox = {
+  x: 0.04,
+  y: 0.66,
+  w: 0.92,
+  h: 0.25
+};
+
+function detectPieceInSlot(imageData, width, height, slotIndex) {
+  const slotW = width / 3;
+  const x0 = Math.floor(slotIndex * slotW + slotW * 0.08);
+  const x1 = Math.floor((slotIndex + 1) * slotW - slotW * 0.08);
+  const y0 = Math.floor(trayBox.y * height);
+  const y1 = Math.floor((trayBox.y + trayBox.h) * height);
+
+  const step = 3;
+  const points = [];
+
+  // Renkli ve parlak blok piksellerini bul
+  for (let y = y0; y < y1; y += step) {
+    for (let x = x0; x < x1; x += step) {
+      const i = (y * width + x) * 4;
+      const r = imageData.data[i];
+      const g = imageData.data[i + 1];
+      const b = imageData.data[i + 2];
+
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const brightness = (r + g + b) / 3;
+      const saturation = max === 0 ? 0 : (max - min) / max;
+
+      if (brightness > 100 && (saturation > 0.18 || brightness > 190)) {
+        points.push({ x, y });
+      }
+    }
+  }
+
+  if (points.length < 20) return null;
+
+  // Yakın pikselleri kümelere ayır
+  const cellSizeGuess = width * 0.075;
+  const clusters = [];
+
+  points.forEach(p => {
+    let found = clusters.find(c =>
+      Math.abs(c.x - p.x) < cellSizeGuess * 0.65 &&
+      Math.abs(c.y - p.y) < cellSizeGuess * 0.65
+    );
+
+    if (!found) {
+      clusters.push({
+        x: p.x,
+        y: p.y,
+        count: 1,
+        minX: p.x,
+        maxX: p.x,
+        minY: p.y,
+        maxY: p.y
+      });
+    } else {
+      found.count++;
+      found.x += (p.x - found.x) / found.count;
+      found.y += (p.y - found.y) / found.count;
+      found.minX = Math.min(found.minX, p.x);
+      found.maxX = Math.max(found.maxX, p.x);
+      found.minY = Math.min(found.minY, p.y);
+      found.maxY = Math.max(found.maxY, p.y);
+    }
+  });
+
+  // Küçük gürültü kümelerini çıkar
+  const valid = clusters.filter(c =>
+    c.count >= 8 &&
+    c.maxX - c.minX > cellSizeGuess * 0.25 &&
+    c.maxY - c.minY > cellSizeGuess * 0.25
+  );
+
+  if (valid.length < 1 || valid.length > 25) return null;
+
+  // Kare merkezleri arasındaki tipik mesafeyi tahmin et
+  const sizes = valid.map(c =>
+    ((c.maxX - c.minX) + (c.maxY - c.minY)) / 2
+  ).sort((a, b) => a - b);
+
+  const cell = sizes[Math.floor(sizes.length / 2)] * 1.05;
+  if (!cell || cell < 5) return null;
+
+  const minX = Math.min(...valid.map(c => c.x));
+  const minY = Math.min(...valid.map(c => c.y));
+
+  const cells = valid.map(c => ({
+    r: Math.round((c.y - minY) / cell),
+    c: Math.round((c.x - minX) / cell)
+  }));
+
+  const rows = Math.max(...cells.map(p => p.r)) + 1;
+  const cols = Math.max(...cells.map(p => p.c)) + 1;
+
+  if (rows > 5 || cols > 5) return null;
+
+  const matrix = Array.from(
+    { length: rows },
+    () => Array(cols).fill(0)
+  );
+
+  cells.forEach(p => {
+    matrix[p.r][p.c] = 1;
+  });
+
+  // Boş kenarları kırp
+  const occupiedRows = matrix
+    .map((row, i) => row.some(Boolean) ? i : -1)
+    .filter(i => i >= 0);
+
+  const occupiedCols = [];
+  for (let c = 0; c < cols; c++) {
+    if (matrix.some(row => row[c])) occupiedCols.push(c);
+  }
+
+  if (!occupiedRows.length || !occupiedCols.length) return null;
+
+  const shape = occupiedRows.map(r =>
+    occupiedCols.map(c => matrix[r][c])
+  );
+
+  return matchDetectedShape(shape);
+}
+
+function matchDetectedShape(detected) {
+  const key = shape =>
+    shape.map(row => row.join('')).join('/');
+
+  const detectedKey = key(detected);
+
+  const found = SHAPES.find(shape => key(shape) === detectedKey);
+
+  return found || null;
+}
+
+function detectAllThreePieces() {
+  if (!loadedImg) {
+    alert('Önce ekran görüntüsü yükleyin veya canlı ekran okumayı başlatın.');
+    return false;
+  }
+
+  ctx.drawImage(loadedImg, 0, 0, scanCanvas.width, scanCanvas.height);
+
+  const imageData = ctx.getImageData(
+    0, 0, scanCanvas.width, scanCanvas.height
+  );
+
+  const detected = [];
+
+  for (let i = 0; i < 3; i++) {
+    const shape = detectPieceInSlot(
+      imageData,
+      scanCanvas.width,
+      scanCanvas.height,
+      i
+    );
+
+    if (!shape) {
+      document.getElementById('statusText').textContent =
+        `Blok ${i + 1} algılanamadı. Ekran bölgesi ayarlanmalı.`;
+      return false;
+    }
+
+    detected.push(shape);
+  }
+
+  hand = detected;
+  bestPlan = null;
+  renderSlots();
+  renderBoard();
+
+  document.getElementById('statusText').textContent =
+    'Üç blok algılandı! Şimdi hamle hesaplanabilir.';
+
+  return true;
+}
+
 // EKRAN GÖRÜNTÜSÜNDEN TAHTA OKUMA
 
 function analyzeScreenAndSolve() {
@@ -915,7 +1099,7 @@ function analyzeScreenAndSolve() {
       board[r][c] = brightness > 75 ? 1 : 0;
     }
   }
-
+if (!detectAllThreePieces()) return;
   bestPlan = null;
   drawScanOverlay();
   switchTab('solver');
