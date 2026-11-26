@@ -643,25 +643,50 @@ alert('Ekran paylaşımı başlatılamadı: '+(err?.message||err));
 }
 }
 
-// BLOK RENK ALGILAMA
 
-function isGameBlockColor(r,g,b){
-const blue=
-b>100 &&
-g>95 &&
-b>r*1.12 &&
-g>r*1.08 &&
-(b-r)>35;
+ // BLOK RENK ALGILAMA
 
-const orange=
-r>135 &&
-g>55 &&
-r>g*1.18 &&
-g>b*1.12 &&
-(r-b)>45;
+function isGameBlockColor(r, g, b) {
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
 
-return blue||orange;
+    const brightness = (r + g + b) / 3;
+    const saturation = max === 0 ? 0 : (max - min) / max;
+
+    return (
+        brightness > 75 &&
+        max > 105 &&
+        (max - min) > 28 &&
+        saturation > 0.18
+    );
 }
+
+function trimShape(matrix) {
+    let top = matrix.findIndex(row => row.some(Boolean));
+    if (top < 0) return null;
+
+    let bottom = matrix.length - 1;
+
+    while (bottom >= top && !matrix[bottom].some(Boolean)) {
+        bottom--;
+    }
+
+    let left = matrix[0].length;
+    let right = -1;
+
+    for (let r = top; r <= bottom; r++) {
+        for (let c = 0; c < matrix[r].length; c++) {
+            if (matrix[r][c]) {
+                left = Math.min(left, c);
+                right = Math.max(right, c);
+            }
+        }
+    }
+
+    return matrix.slice(top, bottom + 1)
+        .map(row => row.slice(left, right + 1));
+}
+
 
 function trimShape(matrix){
 let top=matrix.findIndex(row=>row.some(Boolean));
