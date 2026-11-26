@@ -538,24 +538,36 @@
       img.src = URL.createObjectURL(file);
     }
 
-    async function startScreenCapture() {
-      try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        await video.play();
-        loadedImg = video;
-        const loop = () => {
-          if (stream.active) {
-            drawScanOverlay();
-            requestAnimationFrame(loop);
-          }
-        };
-        loop();
-      } catch (err) {
-        alert('Bu cihaz/tarayıcı canlı ekran paylaşımını kısıtlıyor. Ekran Görüntüsü Seç butonunu veya APK içindeki Overlay servisini kullanın.');
-      }
+  
+async function startScreenCapture() {
+  try {
+    const ScreenCapture = window.Capacitor?.Plugins?.ScreenCapture;
+
+    if (!ScreenCapture) {
+      alert('Android ekran yakalama eklentisi bulunamadı. APK yeniden derlenmelidir.');
+      return;
     }
+
+    await ScreenCapture.addListener('screenFrame', (event) => {
+      if (!event.image) return;
+
+      const img = new Image();
+
+      img.onload = () => {
+        loadedImg = img;
+        drawScanOverlay();
+      };
+
+      img.src = 'data:image/jpeg;base64,' + event.image;
+    });
+
+    await ScreenCapture.start();
+
+  } catch (err) {
+    alert('Ekran paylaşımı başlatılamadı: ' + err.message);
+  }
+}
+
 
     function analyzeScreenAndSolve() {
       if (!loadedImg) {
