@@ -1,16 +1,16 @@
 
-package com.blockblast.aisolver;
-
 import android.content.Intent;
 import android.media.projection.MediaProjectionManager;
 
-import com.getcapacitor.ActivityCallback;
-import com.getcapacitor.ActivityResult;
+import androidx.activity.result.ActivityResult;
+
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
+
 
 @CapacitorPlugin(name = "ScreenCapture")
 public class ScreenCapturePlugin extends Plugin {
