@@ -54,8 +54,10 @@ public class OverlayPlugin extends Plugin {
             return;
         }
 
-        String cells = call.getString("cells", "[]");
-
+       String cells = call.getString("cells");
+      if (cells == null) {
+      cells = "[]";
+}
         Intent intent = new Intent(
             getContext(),
             OverlayService.class
