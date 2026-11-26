@@ -85,6 +85,18 @@ jobs:
           manifest.write_text(content)
           PY
 
+      - name: Verify native Java files
+        run: |
+          cd "block blast apk"
+          echo "JAVA FILES:"
+          find android/app/src/main/java -name "*.java"
+          echo "PLUGIN PACKAGE:"
+          head -n 5 android/app/src/main/java/com/blockblast/aisolver/ScreenCapturePlugin.java
+          echo "SERVICE PACKAGE:"
+          head -n 5 android/app/src/main/java/com/blockblast/aisolver/ScreenCaptureService.java
+          echo "MAIN ACTIVITY PACKAGE:"
+          head -n 5 android/app/src/main/java/com/blockblast/aisolver/MainActivity.java
+
       - name: Sync Android
         run: cd "block blast apk" && npx cap sync android
 
