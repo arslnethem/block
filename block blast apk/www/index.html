@@ -114,6 +114,7 @@ Turuncu çerçeve alt blokların tarama alanıdır.
 <div class="toolbar" style="margin-bottom:10px">
 <button class="primary" onclick="document.getElementById('imgInput').click()">Ekran Görüntüsü Seç</button>
 <button class="warn" onclick="startScreenCapture()">Canlı Ekran Oku</button>
+<button onclick="stopScreenCapture()">Canlı Okumayı Durdur</button>
 </div>
 
 <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="loadScreenshot(event)">
@@ -459,6 +460,12 @@ renderBoard();
 const scanCanvas=document.getElementById('scanCanvas');
 const ctx=scanCanvas.getContext('2d',{willReadFrequently:true});
 let loadedImg=null;
+ // CANLI EKRAN TAKİP SİSTEMİ
+let liveCaptureActive = false;
+let liveAnalysisBusy = false;
+let liveLastSignature = '';
+let liveFrameCount = 0;
+let liveListener = null;
 
 // Portre oyun ekranı için başlangıç koordinatları.
 // Gerekirse aşağıdaki ayar kaydırıcılarından değiştirilebilir.
@@ -603,46 +610,102 @@ alert('Görüntü açılamadı. Başka bir ekran görüntüsü deneyin.');
 img.src=URL.createObjectURL(file);
 }
 
-async function startScreenCapture(){
-try{
-const ScreenCapture=window.Capacitor?.Plugins?.ScreenCapture;
 
-if(!ScreenCapture){
-alert('Android ekran yakalama eklentisi bulunamadı. APK yeniden derlenmelidir.');
-return;
+async function startScreenCapture() {
+    try {
+        const ScreenCapture = window.Capacitor?.Plugins?.ScreenCapture;
+
+        if (!ScreenCapture) {
+            alert('Android ekran yakalama eklentisi bulunamadı. APK yeniden derlenmelidir.');
+            return;
+        }
+
+        if (liveCaptureActive) {
+            document.getElementById('statusText').textContent =
+                'Canlı ekran okuma zaten etkin.';
+            return;
+        }
+
+        if (liveListener) {
+            try {
+                await liveListener.remove();
+            } catch (e) {}
+            liveListener = null;
+        }
+
+        liveListener = await ScreenCapture.addListener(
+            'screenFrame',
+            event => {
+                if (!event.image || !liveCaptureActive) return;
+
+                const img = new Image();
+
+                img.onload = () => {
+                    if (!liveCaptureActive) return;
+
+                    loadedImg = img;
+
+                    scanCanvas.width = img.naturalWidth || img.width;
+                    scanCanvas.height = img.naturalHeight || img.height;
+
+                    drawScanOverlay();
+
+                    liveFrameCount++;
+
+                    // Her yeni karede otomatik analiz
+                    analyzeScreenAndSolve(true);
+                };
+
+                img.onerror = () => {
+                    console.warn('Canlı ekran görüntüsü çözümlenemedi.');
+                };
+
+                img.src = 'data:image/jpeg;base64,' + event.image;
+            }
+        );
+
+        liveCaptureActive = true;
+        liveLastSignature = '';
+        liveFrameCount = 0;
+
+        await ScreenCapture.start();
+
+        document.getElementById('statusText').textContent =
+            'Canlı ekran başladı. Görüntüler otomatik analiz ediliyor.';
+
+    } catch (err) {
+        liveCaptureActive = false;
+
+        alert(
+            'Ekran paylaşımı başlatılamadı: ' +
+            (err?.message || err)
+        );
+    }
 }
 
-if(window._screenListener){
-try{
-await window._screenListener.remove();
-}catch(e){}
+async function stopScreenCapture() {
+    try {
+        liveCaptureActive = false;
+        liveLastSignature = '';
+
+        const ScreenCapture = window.Capacitor?.Plugins?.ScreenCapture;
+
+        if (ScreenCapture) {
+            await ScreenCapture.stop();
+        }
+
+        if (liveListener) {
+            await liveListener.remove();
+            liveListener = null;
+        }
+
+        document.getElementById('statusText').textContent =
+            'Canlı ekran okuma durduruldu.';
+
+    } catch (err) {
+        console.error('Canlı ekran durdurma hatası:', err);
+    }
 }
-
-window._screenListener=await ScreenCapture.addListener('screenFrame',event=>{
-if(!event.image)return;
-
-const img=new Image();
-
-img.onload=()=>{
-loadedImg=img;
-scanCanvas.width=img.naturalWidth||img.width;
-scanCanvas.height=img.naturalHeight||img.height;
-drawScanOverlay();
-};
-
-img.src='data:image/jpeg;base64,'+event.image;
-});
-
-await ScreenCapture.start();
-
-document.getElementById('statusText').textContent=
-'Canlı ekran paylaşımı başladı. Oyun ekranını açıp geri dönün.';
-
-}catch(err){
-alert('Ekran paylaşımı başlatılamadı: '+(err?.message||err));
-}
-}
-
 
  // BLOK RENK ALGILAMA
 
@@ -855,7 +918,6 @@ detected.push(shape);
 }
 
 hand=detected;
-bestPlan=null;
 renderSlots();
 renderBoard();
 
@@ -864,40 +926,121 @@ return true;
 
 // OYUN TAHTASINI OKU VE ÇÖZ
 
-function analyzeScreenAndSolve(){
 
-if(!loadedImg){
-alert('Önce ekran görüntüsü seçin veya canlı ekran okumayı başlatın.');
-return;
+function analyzeScreenAndSolve(live = false) {
+
+    if (!loadedImg) {
+        if (!live) {
+            alert('Önce ekran görüntüsü seçin veya canlı ekran okumayı başlatın.');
+        }
+        return;
+    }
+
+    if (live && liveAnalysisBusy) return;
+
+    liveAnalysisBusy = true;
+
+    try {
+        ctx.drawImage(
+            loadedImg,
+            0,
+            0,
+            scanCanvas.width,
+            scanCanvas.height
+        );
+
+        const imageData = ctx.getImageData(
+            0,
+            0,
+            scanCanvas.width,
+            scanCanvas.height
+        );
+
+        const bx = boardBox.x * scanCanvas.width;
+        const by = boardBox.y * scanCanvas.height;
+        const cw = boardBox.w * scanCanvas.width / 8;
+        const ch = boardBox.h * scanCanvas.height / 8;
+
+        let occupied = 0;
+
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+
+                let hits = 0;
+
+                for (const oy of [.36, .50, .64]) {
+                    for (const ox of [.36, .50, .64]) {
+
+                        const px = Math.floor(bx + (c + ox) * cw);
+                        const py = Math.floor(by + (r + oy) * ch);
+
+                        const i = (py * scanCanvas.width + px) * 4;
+
+                        if (isGameBlockColor(
+                            imageData.data[i],
+                            imageData.data[i + 1],
+                            imageData.data[i + 2]
+                        )) {
+                            hits++;
+                        }
+                    }
+                }
+
+                board[r][c] = hits >= 3 ? 1 : 0;
+
+                if (board[r][c]) occupied++;
+            }
+        }
+
+        if (!detectAllThreePieces(imageData)) {
+            if (live) {
+                document.getElementById('statusText').textContent =
+                    'Canlı takip: Üç parçadan biri henüz algılanamadı.';
+            }
+
+            drawScanOverlay();
+            return;
+        }
+
+        // Tahta ve üç parçadan benzersiz durum imzası oluştur
+        const signature = JSON.stringify({
+            board: board,
+            hand: hand
+        });
+
+        // Aynı görüntü daha önce çözüldüyse yeniden hesaplama
+        if (live && signature === liveLastSignature) {
+            return;
+        }
+
+        liveLastSignature = signature;
+
+        bestPlan = null;
+
+        drawScanOverlay();
+
+        if (!live) {
+            switchTab('solver');
+        }
+
+        solveBest();
+
+        document.getElementById('statusText').textContent =
+            live
+                ? `CANLI ANALİZ: ${occupied}/64 hücre dolu. Yeni çözüm hesaplandı.`
+                : `Tahta okundu: ${occupied}/64 dolu hücre. Üç parça algılandı.`;
+
+    } catch (error) {
+        console.error('Ekran analiz hatası:', error);
+
+        document.getElementById('statusText').textContent =
+            'Görüntü analiz edilirken hata oluştu.';
+
+    } finally {
+        liveAnalysisBusy = false;
+    }
 }
 
-ctx.drawImage(
-loadedImg,
-0,
-0,
-scanCanvas.width,
-scanCanvas.height
-);
-
-const imageData=ctx.getImageData(
-0,
-0,
-scanCanvas.width,
-scanCanvas.height
-);
-
-const bx=boardBox.x*scanCanvas.width;
-const by=boardBox.y*scanCanvas.height;
-const cw=boardBox.w*scanCanvas.width/8;
-const ch=boardBox.h*scanCanvas.height/8;
-
-let occupied=0;
-
-for(let r=0;r<8;r++){
-for(let c=0;c<8;c++){
-
-let hits=0;
-let total=0;
 
 // Hücre merkezinin çevresinden 3x3 örnek al
 for(const oy of [.36,.50,.64]){
