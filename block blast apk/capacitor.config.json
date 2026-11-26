@@ -1,0 +1,9 @@
+{
+  "appId": "com.blockblast.aisolver",
+  "appName": "Block Blast AI",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true
+  }
+}

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Block Blast AI Çözücü</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card: #131c31;
+      --card-2: #1e293b;
+      --accent: #38bdf8;
+      --accent-2: #22c55e;
+      --warn: #f59e0b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: env(safe-area-inset-top) 12px calc(76px + env(safe-area-inset-bottom)) 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 4px;
+    }
+    h1 { font-size: 1.15rem; margin: 0; font-weight: 800; letter-spacing: -0.02em; }
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .container { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 12px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      background: var(--card-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      flex: 1;
+      min-width: 90px;
+      transition: transform 0.08s;
+    }
+    button:active { transform: scale(0.97); }
+    button.primary { background: var(--accent); color: #082f49; border-color: var(--accent); }
+    button.success { background: var(--accent-2); color: #052e16; border-color: var(--accent-2); }
+    button.warn { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4); }
+
+    /* 8x8 Board */
+    .board-wrap { display: flex; justify-content: center; margin: 4px 0; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 4px;
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 1;
+      background: #0f172a;
+      padding: 8px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      touch-action: none;
+    }
+    .cell {
+      background: #1e293b;
+      border-radius: 6px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 0.85rem;
+    }
+    .cell.filled { background: #64748b; box-shadow: inset 0 2px 0 rgba(255,255,255,0.2); }
+    .cell.step-1 { background: #38bdf8; color: #082f49; }
+    .cell.step-2 { background: #22c55e; color: #052e16; }
+    .cell.step-3 { background: #f59e0b; color: #451a03; }
+
+    /* Piece Slots */
+    .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .slot {
+      background: #0f172a;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .slot.active { border-color: var(--accent); background: rgba(56, 189, 248, 0.08); }
+    .slot-title { font-size: 0.75rem; color: var(--muted); font-weight: 700; }
+    .mini-grid { display: grid; grid-template-columns: repeat(5, 11px); gap: 2px; height: 63px; align-content: center; }
+    .mini-cell { width: 11px; height: 11px; border-radius: 2px; background: transparent; }
+    .mini-cell.on { background: var(--accent); }
+
+    /* Catalog */
+    .catalog {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-height: 210px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .cat-item {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+    .cat-item:active { border-color: var(--accent); }
+
+    /* Screen Reader / Image Scanner */
+    .scanner-box {
+      position: relative;
+      width: 100%;
+      background: #020617;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px dashed var(--border);
+      min-height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #scanCanvas { width: 100%; height: auto; display: block; touch-action: none; }
+    .status-bar { font-size: 0.82rem; color: var(--accent); font-weight: 600; text-align: center; padding: 6px 0; }
+    .steps-list { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; }
+    .step-item {
+      background: #0f172a;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border-left: 4px solid var(--accent);
+      display: flex;
+      justify-content: space-between;
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #0f172a;
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding: 8px 12px calc(8px + env(safe-area-inset-bottom)) 12px;
+      gap: 8px;
+      z-index: 50;
+    }
+    .nav-btn { flex: 1; padding: 10px; font-size: 0.82rem; border-radius: 10px; }
+    .nav-btn.active { background: var(--accent); color: #082f49; border-color: var(--accent); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Block Blast AI Çözücü</h1>
+    <span class="badge">ANDROID APK SÜRÜMÜ</span>
+  </header>
+
+  <div class="container">
+    <!-- TAB 1: SOLVER -->
+    <div id="tab-solver" class="tab-view" style="display:flex; flex-direction:column; gap:12px;">
+      <div class="card">
+        <div class="board-wrap">
+          <div id="board" class="board"></div>
+        </div>
+        <div id="statusText" class="status-bar">Tahtaya dokun veya ekran görüntüsü tara</div>
+        <div class="toolbar">
+          <button class="primary" onclick="solveBest()">En İyi Hamleyi Bul</button>
+          <button class="success" onclick="applySolution()">Hamleyi Uygula</button>
+          <button onclick="clearBoard()">Temizle</button>
+        </div>
+      </div>
+
+      <div id="solutionCard" class="card hidden">
+        <div style="font-weight:800; margin-bottom:8px; font-size:0.9rem;">Önerilen Yerleştirme Sırası</div>
+        <div id="stepsList" class="steps-list"></div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:800; margin-bottom:8px; font-size:0.88rem;">Elindeki 3 Bloğu Seç (Yuvaya Dokun)</div>
+        <div class="slots" id="slots"></div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:800; margin-bottom:8px; font-size:0.85rem; color:var(--muted);">Blok Kataloğu</div>
+        <div class="catalog" id="catalog"></div>
+      </div>
+    </div>
+
+    <!-- TAB 2: SCREEN READER -->
+    <div id="tab-scanner" class="tab-view hidden" style="display:flex; flex-direction:column; gap:12px;">
+      <div class="card">
+        <div style="font-weight:800; margin-bottom:6px;">Ekran Okuyucu (Canlı / Ekran Görüntüsü)</div>
+        <p style="font-size:0.8rem; color:var(--muted); margin:0 0 10px 0;">
+          Android'de Block Blast ekran görüntüsünü yükle veya canlı ekran paylaşımını başlat. Mavi çerçeveyi 8×8 tahtaya, sarı çerçeveyi alttaki 3 bloğa hizala.
+        </p>
+        <div class="toolbar" style="margin-bottom:10px;">
+          <button class="primary" onclick="document.getElementById('imgInput').click()">Ekran Görüntüsü Seç</button>
+          <button class="warn" onclick="startScreenCapture()">Canlı Ekran Oku</button>
+        </div>
+        <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="loadScreenshot(event)" />
+        <div class="scanner-box">
+          <canvas id="scanCanvas" width="360" height="640"></canvas>
+        </div>
+        <div class="toolbar" style="margin-top:10px;">
+          <button class="success" onclick="analyzeScreenAndSolve()">Ekrandan Oku & Çöz</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-solver" onclick="switchTab('solver')">8×8 Çözücü</button>
+    <button class="nav-btn" id="nav-scanner" onclick="switchTab('scanner')">Ekran Okuyucu</button>
+  </nav>
+
+  <script>
+    const SHAPES = [
+      [[1]], [[1,1]], [[1],[1]], [[1,1,1]], [[1],[1],[1]],
+      [[1,1,1,1]], [[1],[1],[1],[1]], [[1,1,1,1,1]], [[1],[1],[1],[1],[1]],
+      [[1,1],[1,1]], [[1,1,1],[1,1,1],[1,1,1]],
+      [[1,0],[1,1]], [[0,1],[1,1]], [[1,1],[1,0]], [[1,1],[0,1]],
+      [[1,0,0],[1,0,0],[1,1,1]], [[0,0,1],[0,0,1],[1,1,1]],
+      [[1,1,1],[1,0,0],[1,0,0]], [[1,1,1],[0,0,1],[0,0,1]],
+      [[1,1,1],[0,1,0]], [[0,1,0],[1,1,1]], [[1,0],[1,1],[1,0]], [[0,1],[1,1],[0,1]],
+      [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]], [[1,0],[1,1],[0,1]], [[0,1],[1,1],[1,0]],
+      [[1,1,1],[1,1,1]], [[1,1],[1,1],[1,1]]
+    ];
+
+    let board = Array.from({length: 8}, () => Array(8).fill(0));
+    let hand = [SHAPES[9], SHAPES[3], SHAPES[11]];
+    let activeSlot = 0;
+    let bestPlan = null;
+    let isDrawing = false;
+    let drawValue = 1;
+
+    function init() {
+      renderBoard();
+      renderSlots();
+      renderCatalog();
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tab-solver').classList.toggle('hidden', tab !== 'solver');
+      document.getElementById('tab-scanner').classList.toggle('hidden', tab !== 'scanner');
+      document.getElementById('nav-solver').classList.toggle('active', tab === 'solver');
+      document.getElementById('nav-scanner').classList.toggle('active', tab === 'scanner');
+    }
+
+    function renderBoard() {
+      const el = document.getElementById('board');
+      el.innerHTML = '';
+      const overlay = {};
+      if (bestPlan) {
+        bestPlan.forEach((step, idx) => {
+          step.cells.forEach(([r, c]) => {
+            overlay[`${r},${c}`] = idx + 1;
+          });
+        });
+      }
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          const stepNum = overlay[`${r},${c}`];
+          if (stepNum) {
+            cell.classList.add(`step-${stepNum}`);
+            cell.textContent = stepNum;
+          } else if (board[r][c]) {
+            cell.classList.add('filled');
+          }
+          cell.onpointerdown = (e) => {
+            e.preventDefault();
+            bestPlan = null;
+            isDrawing = true;
+            drawValue = board[r][c] ? 0 : 1;
+            board[r][c] = drawValue;
+            renderBoard();
+          };
+          cell.onpointerenter = () => {
+            if (isDrawing) {
+              board[r][c] = drawValue;
+              renderBoard();
+            }
+          };
+          el.appendChild(cell);
+        }
+      }
+    }
+    window.addEventListener('pointerup', () => isDrawing = false);
+
+    function drawMiniShape(container, shape) {
+      container.innerHTML = '';
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          const d = document.createElement('div');
+          d.className = 'mini-cell';
+          if (shape && shape[r] && shape[r][c]) d.classList.add('on');
+          container.appendChild(d);
+        }
+      }
+    }
+
+    function renderSlots() {
+      const el = document.getElementById('slots');
+      el.innerHTML = '';
+      hand.forEach((shape, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'slot' + (activeSlot === i ? ' active' : '');
+        slot.onclick = () => { activeSlot = i; renderSlots(); };
+        const title = document.createElement('div');
+        title.className = 'slot-title';
+        title.textContent = `Blok ${i + 1}`;
+        const grid = document.createElement('div');
+        grid.className = 'mini-grid';
+        drawMiniShape(grid, shape);
+        slot.appendChild(title);
+        slot.appendChild(grid);
+        el.appendChild(slot);
+      });
+    }
+
+    function renderCatalog() {
+      const el = document.getElementById('catalog');
+      el.innerHTML = '';
+      SHAPES.forEach((shape) => {
+        const item = document.createElement('div');
+        item.className = 'cat-item';
+        const grid = document.createElement('div');
+        grid.className = 'mini-grid';
+        drawMiniShape(grid, shape);
+        item.appendChild(grid);
+        item.onclick = () => {
+          hand[activeSlot] = shape;
+          activeSlot = (activeSlot + 1) % 3;
+          bestPlan = null;
+          renderSlots();
+          renderBoard();
+        };
+        el.appendChild(item);
+      });
+    }
+
+    function canPlace(b, shape, r0, c0) {
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[0].length; c++) {
+          if (shape[r][c]) {
+            const nr = r0 + r, nc = c0 + c;
+            if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8 || b[nr][nc]) return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    function placeAndClear(b, shape, r0, c0) {
+      const nb = b.map(row => [...row]);
+      const cells = [];
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[0].length; c++) {
+          if (shape[r][c]) {
+            nb[r0 + r][c0 + c] = 1;
+            cells.push([r0 + r, c0 + c]);
+          }
+        }
+      }
+      const fullRows = [], fullCols = [];
+      for (let r = 0; r < 8; r++) if (nb[r].every(v => v === 1)) fullRows.push(r);
+      for (let c = 0; c < 8; c++) {
+        let ok = true;
+        for (let r = 0; r < 8; r++) if (!nb[r][c]) ok = false;
+        if (ok) fullCols.push(c);
+      }
+      fullRows.forEach(r => nb[r].fill(0));
+      fullCols.forEach(c => { for (let r = 0; r < 8; r++) nb[r][c] = 0; });
+      return { board: nb, cleared: fullRows.length + fullCols.length, cells };
+    }
+
+    function evaluateBoard(b) {
+      let empty = 0, transitions = 0, holes = 0;
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          if (!b[r][c]) {
+            empty++;
+            let blocked = 0;
+            if (r === 0 || b[r-1][c]) blocked++;
+            if (r === 7 || b[r+1][c]) blocked++;
+            if (c === 0 || b[r][c-1]) blocked++;
+            if (c === 7 || b[r][c+1]) blocked++;
+            if (blocked === 4) holes++;
+          }
+          if (c < 7 && b[r][c] !== b[r][c+1]) transitions++;
+          if (r < 7 && b[r][c] !== b[r+1][c]) transitions++;
+        }
+      }
+      return empty * 12 - transitions * 2.5 - holes * 18;
+    }
+
+    function solveBest() {
+      const perms = [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+      let bestScore = -Infinity;
+      let winner = null;
+
+      for (const p of perms) {
+        const s0 = hand[p[0]], s1 = hand[p[1]], s2 = hand[p[2]];
+        for (let r0 = 0; r0 <= 8 - s0.length; r0++) {
+          for (let c0 = 0; c0 <= 8 - s0[0].length; c0++) {
+            if (!canPlace(board, s0, r0, c0)) continue;
+            const res0 = placeAndClear(board, s0, r0, c0);
+            for (let r1 = 0; r1 <= 8 - s1.length; r1++) {
+              for (let c1 = 0; c1 <= 8 - s1[0].length; c1++) {
+                if (!canPlace(res0.board, s1, r1, c1)) continue;
+                const res1 = placeAndClear(res0.board, s1, r1, c1);
+                for (let r2 = 0; r2 <= 8 - s2.length; r2++) {
+                  for (let c2 = 0; c2 <= 8 - s2[0].length; c2++) {
+                    if (!canPlace(res1.board, s2, r2, c2)) continue;
+                    const res2 = placeAndClear(res1.board, s2, r2, c2);
+                    const totalCleared = res0.cleared + res1.cleared + res2.cleared;
+                    const score = evaluateBoard(res2.board) + totalCleared * 95;
+                    if (score > bestScore) {
+                      bestScore = score;
+                      winner = [
+                        { slot: p[0], r: r0, c: c0, cleared: res0.cleared, cells: res0.cells },
+                        { slot: p[1], r: r1, c: c1, cleared: res1.cleared, cells: res1.cells },
+                        { slot: p[2], r: r2, c: c2, cleared: res2.cleared, cells: res2.cells }
+                      ];
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (!winner) {
+        document.getElementById('statusText').textContent = 'Bu 3 blok için geçerli hamle bulunamadı!';
+        return;
+      }
+      bestPlan = winner;
+      renderBoard();
+      const list = document.getElementById('stepsList');
+      list.innerHTML = '';
+      const cols = 'ABCDEFGH';
+      winner.forEach((step, i) => {
+        const div = document.createElement('div');
+        div.className = 'step-item';
+        div.innerHTML = `<span><b>${i+1}. Adım:</b> Blok ${step.slot + 1} → <b>${cols[step.c]}${step.r + 1}</b></span><span>${step.cleared > 0 ? '+' + step.cleared + ' Satır/Sütun' : ''}</span>`;
+        list.appendChild(div);
+      });
+      document.getElementById('solutionCard').classList.remove('hidden');
+      document.getElementById('statusText').textContent = 'En yüksek puanlı 3 hamle hesaplandı!';
+    }
+
+    function applySolution() {
+      if (!bestPlan) return;
+      bestPlan.forEach(step => {
+        const res = placeAndClear(board, hand[step.slot], step.r, step.c);
+        board = res.board;
+      });
+      bestPlan = null;
+      document.getElementById('solutionCard').classList.add('hidden');
+      renderBoard();
+      document.getElementById('statusText').textContent = 'Hamleler uygulandı. Yeni 3 bloğu seçin.';
+    }
+
+    function clearBoard() {
+      board = Array.from({length: 8}, () => Array(8).fill(0));
+      bestPlan = null;
+      document.getElementById('solutionCard').classList.add('hidden');
+      renderBoard();
+    }
+
+    // Screen & Screenshot Scanner
+    const scanCanvas = document.getElementById('scanCanvas');
+    const ctx = scanCanvas.getContext('2d');
+    let loadedImg = null;
+    let boardBox = { x: 0.08, y: 0.24, w: 0.84, h: 0.47 };
+
+    function drawScanOverlay() {
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, scanCanvas.width, scanCanvas.height);
+      if (loadedImg) {
+        ctx.drawImage(loadedImg, 0, 0, scanCanvas.width, scanCanvas.height);
+      }
+      const bx = boardBox.x * scanCanvas.width;
+      const by = boardBox.y * scanCanvas.height;
+      const bw = boardBox.w * scanCanvas.width;
+      const bh = boardBox.h * scanCanvas.height;
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(bx, by, bw, bh);
+    }
+
+    function loadScreenshot(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        loadedImg = img;
+        scanCanvas.height = Math.round(scanCanvas.width * (img.height / img.width));
+        drawScanOverlay();
+      };
+      img.src = URL.createObjectURL(file);
+    }
+
+    async function startScreenCapture() {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        await video.play();
+        loadedImg = video;
+        const loop = () => {
+          if (stream.active) {
+            drawScanOverlay();
+            requestAnimationFrame(loop);
+          }
+        };
+        loop();
+      } catch (err) {
+        alert('Bu cihaz/tarayıcı canlı ekran paylaşımını kısıtlıyor. Ekran Görüntüsü Seç butonunu veya APK içindeki Overlay servisini kullanın.');
+      }
+    }
+
+    function analyzeScreenAndSolve() {
+      if (!loadedImg) {
+        alert('Önce bir ekran görüntüsü seçin.');
+        return;
+      }
+      ctx.drawImage(loadedImg, 0, 0, scanCanvas.width, scanCanvas.height);
+      const bx = boardBox.x * scanCanvas.width;
+      const by = boardBox.y * scanCanvas.height;
+      const cw = (boardBox.w * scanCanvas.width) / 8;
+      const ch = (boardBox.h * scanCanvas.height) / 8;
+
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const px = Math.floor(bx + c * cw + cw * 0.5);
+          const py = Math.floor(by + r * ch + ch * 0.5);
+          const data = ctx.getImageData(px, py, 1, 1).data;
+          const brightness = (data[0] + data[1] + data[2]) / 3;
+          board[r][c] = brightness > 75 ? 1 : 0;
+        }
+      }
+      drawScanOverlay();
+      switchTab('solver');
+      solveBest();
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+    init();
+  </script>
+</body>
+</html>

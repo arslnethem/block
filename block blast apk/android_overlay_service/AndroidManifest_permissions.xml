@@ -1,0 +1,4 @@
+<!-- AndroidManifest.xml icine eklenecek ekran ustu cizim ve ekran yakalama izinleri -->
+<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
