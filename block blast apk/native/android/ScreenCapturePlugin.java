@@ -2,92 +2,93 @@
 package com.blockblast.aisolver;
 
 import android.content.Intent;
-import android.media.projection.MediaProjectionManager;
+import android.net.Uri;
+import android.provider.Settings;
 
 import androidx.activity.result.ActivityResult;
 
-import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-
-@CapacitorPlugin(name = "ScreenCapture")
-public class ScreenCapturePlugin extends Plugin {
-
-    private static ScreenCapturePlugin instance;
-
-    @Override
-    public void load() {
-        instance = this;
-    }
+@CapacitorPlugin(name = "Overlay")
+public class OverlayPlugin extends Plugin {
 
     @PluginMethod
-    public void start(PluginCall call) {
-        MediaProjectionManager manager =
-            (MediaProjectionManager) getContext()
-                .getSystemService(android.content.Context.MEDIA_PROJECTION_SERVICE);
+    public void requestPermission(PluginCall call) {
+        if (Settings.canDrawOverlays(getContext())) {
+            call.resolve();
+            return;
+        }
+
+        Intent intent = new Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:" + getContext().getPackageName())
+        );
 
         startActivityForResult(
             call,
-            manager.createScreenCaptureIntent(),
-            "handlePermissionResult"
+            intent,
+            "handleOverlayPermission"
         );
     }
 
     @ActivityCallback
-    private void handlePermissionResult(
+    private void handleOverlayPermission(
         PluginCall call,
         ActivityResult result
     ) {
-        if (result.getResultCode() != android.app.Activity.RESULT_OK
-            || result.getData() == null) {
-            call.reject("Ekran paylaşım izni verilmedi.");
-            return;
-        }
-
-        Intent serviceIntent = new Intent(
-            getContext(),
-            ScreenCaptureService.class
-        );
-
-        serviceIntent.putExtra("resultCode", result.getResultCode());
-        serviceIntent.putExtra("resultData", result.getData());
-
-        try {
-            androidx.core.content.ContextCompat.startForegroundService(
-                getContext(),
-                serviceIntent
-            );
-
-            JSObject response = new JSObject();
-            response.put("started", true);
-            call.resolve(response);
-
-        } catch (Exception error) {
-            call.reject("Ekran yakalama servisi başlatılamadı: "
-                + error.getMessage());
+        if (Settings.canDrawOverlays(getContext())) {
+            call.resolve();
+        } else {
+            call.reject("Diğer uygulamaların üzerinde gösterme izni verilmedi.");
         }
     }
 
     @PluginMethod
-    public void stop(PluginCall call) {
+    public void show(PluginCall call) {
+        if (!Settings.canDrawOverlays(getContext())) {
+            call.reject("Önce hayalet ekran iznini vermelisiniz.");
+            return;
+        }
+
+        String cells = call.getString("cells");
+        if (cells == null) {
+            cells = "[]";
+        }
+
         Intent intent = new Intent(
             getContext(),
-            ScreenCaptureService.class
+            OverlayService.class
         );
-        getContext().stopService(intent);
 
-        call.resolve();
+        intent.setAction(OverlayService.ACTION_SHOW);
+        intent.putExtra("cells", cells);
+
+        try {
+            getContext().startService(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Hayalet ekran başlatılamadı: " + e.getMessage());
+        }
     }
 
-    public static void sendFrame(String imageBase64) {
-        if (instance == null) return;
+    @PluginMethod
+    public void hide(PluginCall call) {
+        Intent intent = new Intent(
+            getContext(),
+            OverlayService.class
+        );
 
-        JSObject data = new JSObject();
-        data.put("image", imageBase64);
-        instance.notifyListeners("screenFrame", data);
+        intent.setAction(OverlayService.ACTION_HIDE);
+
+        try {
+            getContext().startService(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Hayalet ekran kapatılamadı: " + e.getMessage());
+        }
     }
 }
