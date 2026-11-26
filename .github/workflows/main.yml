@@ -50,6 +50,8 @@ jobs:
           cp native/android/OverlayPlugin.java "$PACKAGE_DIR/"
           cp native/android/OverlayService.java "$PACKAGE_DIR/"
           cp native/android/MainActivity.java "$PACKAGE_DIR/"
+          echo "OverlayPlugin dosyası kontrol ediliyor:"
+          ls -l "$PACKAGE_DIR/OverlayPlugin.java"
 
       - name: Configure Android manifest
         run: |
