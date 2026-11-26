@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -9,6 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Block Blast AI Çözücü</title>
 <link rel="manifest" href="manifest.json">
+
 <style>
 :root{--bg:#0b1120;--card:#131c31;--card2:#1e293b;--accent:#38bdf8;--green:#22c55e;--warn:#f59e0b;--text:#f8fafc;--muted:#94a3b8;--border:#334155}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
@@ -48,50 +48,96 @@ button.warn{background:#f59e0b2e;color:#fbbf24;border-color:#f59e0b66}
 .nav-btn{flex:1;padding:10px;font-size:.82rem;border-radius:10px}
 .nav-btn.active{background:var(--accent);color:#082f49;border-color:var(--accent)}
 .hidden{display:none!important}
+.cal-item{display:flex;flex-direction:column;gap:3px;font-size:.72rem;color:var(--muted)}
+.cal-item input{width:100%;accent-color:var(--accent)}
+.cal-item b{color:var(--text);font-size:.75rem}
 </style>
 </head>
+
 <body>
-<header><h1>Block Blast AI Çözücü</h1><span class="badge">ANDROID APK SÜRÜMÜ</span></header>
+<header>
+<h1>Block Blast AI Çözücü</h1>
+<span class="badge">ANDROID APK SÜRÜMÜ</span>
+</header>
 
 <div class="container">
+
 <div id="tab-solver" class="tab-view" style="display:flex;flex-direction:column;gap:12px">
+
 <div class="card">
-<div class="board-wrap"><div id="board" class="board"></div></div>
+<div class="board-wrap">
+<div id="board" class="board"></div>
+</div>
+
 <div id="statusText" class="status-bar">Tahtaya dokun veya ekran görüntüsü tara</div>
+
 <div class="toolbar">
 <button class="primary" onclick="solveBest()">En İyi Hamleyi Bul</button>
 <button class="success" onclick="applySolution()">Hamleyi Uygula</button>
 <button onclick="clearBoard()">Temizle</button>
 </div>
+
 <div class="toolbar" style="margin-top:10px">
 <button class="primary" onclick="showGhostOverlay()">Hayalet Ekranı Göster</button>
 <button class="warn" onclick="hideGhostOverlay()">Hayalet Ekranı Kapat</button>
 </div>
 </div>
+
 <div id="solutionCard" class="card hidden">
 <div style="font-weight:800;margin-bottom:8px;font-size:.9rem">Önerilen Yerleştirme Sırası</div>
 <div id="stepsList" class="steps-list"></div>
 </div>
+
 <div class="card">
 <div style="font-weight:800;margin-bottom:8px;font-size:.88rem">Elindeki 3 Bloğu Seç (Yuvaya Dokun)</div>
 <div class="slots" id="slots"></div>
 </div>
+
 <div class="card">
 <div style="font-weight:800;margin-bottom:8px;font-size:.85rem;color:var(--muted)">Blok Kataloğu</div>
 <div class="catalog" id="catalog"></div>
 </div>
+
 </div>
 
 <div id="tab-scanner" class="tab-view hidden" style="display:flex;flex-direction:column;gap:12px">
+
 <div class="card">
 <div style="font-weight:800;margin-bottom:6px">Ekran Okuyucu (Canlı / Ekran Görüntüsü)</div>
-<p style="font-size:.8rem;color:var(--muted);margin:0 0 10px">Android'de Block Blast ekran görüntüsünü yükle veya canlı ekran paylaşımını başlat. Mavi çerçeveyi 8×8 tahtaya hizala. Turuncu çerçeve alt blokların tarama alanıdır.</p>
+
+<p style="font-size:.8rem;color:var(--muted);margin:0 0 10px">
+Android'de Block Blast ekran görüntüsünü yükle veya canlı ekran paylaşımını başlat.
+Mavi çerçeveyi 8×8 tahtaya hizala.
+Turuncu çerçeve alt blokların tarama alanıdır.
+</p>
+
 <div class="toolbar" style="margin-bottom:10px">
 <button class="primary" onclick="document.getElementById('imgInput').click()">Ekran Görüntüsü Seç</button>
 <button class="warn" onclick="startScreenCapture()">Canlı Ekran Oku</button>
 </div>
+
 <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="loadScreenshot(event)">
-<div class="scanner-box"><canvas id="scanCanvas" width="360" height="640"></canvas></div>
+
+<div class="scanner-box">
+<canvas id="scanCanvas" width="360" height="640"></canvas>
+</div>
+
+<div class="card" style="margin-top:10px;padding:10px">
+<div style="font-weight:800;font-size:.85rem;margin-bottom:8px">Tarama Alanlarını Ayarla</div>
+
+<p style="font-size:.75rem;color:var(--muted);margin:0 0 8px">
+Mavi alanı 8×8 tahtanın dış kenarlarına, turuncu alanı üç parçanın bulunduğu bölgeye hizalayın.
+Kaydırıcılar görüntüye göre ayarlanır.
+</p>
+
+<div id="calibrationControls" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+
+<div class="toolbar" style="margin-top:8px">
+<button onclick="resetCalibration()">Varsayılan Alanlar</button>
+<button onclick="autoFitCalibration()">Ekrana Göre Otomatik Yerleşim</button>
+</div>
+</div>
+
 <div class="toolbar" style="margin-top:10px">
 <button class="success" onclick="analyzeScreenAndSolve()">Ekrandan Oku & Çöz</button>
 </div>
@@ -116,6 +162,7 @@ const SHAPES=[
 [[1,0],[1,1],[1,0]],[[0,1],[1,1],[0,1]],
 [[1,1,0],[0,1,1]],[[0,1,1],[1,1,0]],
 [[1,0],[1,1],[0,1]],[[0,1],[1,1],[1,0]],
+[[1,1],[1,0],[1,0]],[[0,1],[0,1],[1,1]],
 [[1,1,1],[1,1,1]],[[1,1],[1,1],[1,1]]
 ];
 
@@ -123,281 +170,817 @@ let board=Array.from({length:8},()=>Array(8).fill(0));
 let hand=[SHAPES[9],SHAPES[3],SHAPES[11]];
 let activeSlot=0,bestPlan=null,isDrawing=false,drawValue=1;
 
-function init(){renderBoard();renderSlots();renderCatalog()}
+function init(){
+renderBoard();
+renderSlots();
+renderCatalog();
+}
+
 function switchTab(tab){
 document.getElementById('tab-solver').classList.toggle('hidden',tab!=='solver');
 document.getElementById('tab-scanner').classList.toggle('hidden',tab!=='scanner');
 document.getElementById('nav-solver').classList.toggle('active',tab==='solver');
 document.getElementById('nav-scanner').classList.toggle('active',tab==='scanner');
 }
+
 function renderBoard(){
-const el=document.getElementById('board');el.innerHTML='';
+const el=document.getElementById('board');
+el.innerHTML='';
 const overlay={};
-if(bestPlan)bestPlan.forEach((s,i)=>s.cells.forEach(([r,c])=>overlay[`${r},${c}`]=i+1));
-for(let r=0;r<8;r++)for(let c=0;c<8;c++){
-const cell=document.createElement('div');cell.className='cell';
+
+if(bestPlan){
+bestPlan.forEach((s,i)=>{
+s.cells.forEach(([r,c])=>overlay[`${r},${c}`]=i+1);
+});
+}
+
+for(let r=0;r<8;r++){
+for(let c=0;c<8;c++){
+const cell=document.createElement('div');
+cell.className='cell';
 const n=overlay[`${r},${c}`];
-if(n){cell.classList.add(`step-${n}`);cell.textContent=n}
-else if(board[r][c])cell.classList.add('filled');
-cell.onpointerdown=e=>{e.preventDefault();bestPlan=null;isDrawing=true;drawValue=board[r][c]?0:1;board[r][c]=drawValue;renderBoard()};
-cell.onpointerenter=()=>{if(isDrawing){board[r][c]=drawValue;renderBoard()}};
+
+if(n){
+cell.classList.add(`step-${n}`);
+cell.textContent=n;
+}else if(board[r][c]){
+cell.classList.add('filled');
+}
+
+cell.onpointerdown=e=>{
+e.preventDefault();
+bestPlan=null;
+isDrawing=true;
+drawValue=board[r][c]?0:1;
+board[r][c]=drawValue;
+renderBoard();
+};
+
+cell.onpointerenter=()=>{
+if(isDrawing){
+board[r][c]=drawValue;
+renderBoard();
+}
+};
+
 el.appendChild(cell);
-}}
+}
+}
+}
+
 window.addEventListener('pointerup',()=>isDrawing=false);
 
 function drawMiniShape(container,shape){
 container.innerHTML='';
-for(let r=0;r<5;r++)for(let c=0;c<5;c++){
-const d=document.createElement('div');d.className='mini-cell';
+for(let r=0;r<5;r++){
+for(let c=0;c<5;c++){
+const d=document.createElement('div');
+d.className='mini-cell';
 if(shape&&shape[r]&&shape[r][c])d.classList.add('on');
 container.appendChild(d);
-}}
+}
+}
+}
+
 function renderSlots(){
-const el=document.getElementById('slots');el.innerHTML='';
+const el=document.getElementById('slots');
+el.innerHTML='';
+
 hand.forEach((shape,i)=>{
-const slot=document.createElement('div');slot.className='slot'+(activeSlot===i?' active':'');
-slot.onclick=()=>{activeSlot=i;renderSlots()};
-const title=document.createElement('div');title.className='slot-title';title.textContent=`Blok ${i+1}`;
-const grid=document.createElement('div');grid.className='mini-grid';drawMiniShape(grid,shape);
-slot.append(title,grid);el.appendChild(slot);
-});}
+const slot=document.createElement('div');
+slot.className='slot'+(activeSlot===i?' active':'');
+slot.onclick=()=>{
+activeSlot=i;
+renderSlots();
+};
+
+const title=document.createElement('div');
+title.className='slot-title';
+title.textContent=`Blok ${i+1}`;
+
+const grid=document.createElement('div');
+grid.className='mini-grid';
+drawMiniShape(grid,shape);
+
+slot.append(title,grid);
+el.appendChild(slot);
+});
+}
+
 function renderCatalog(){
-const el=document.getElementById('catalog');el.innerHTML='';
+const el=document.getElementById('catalog');
+el.innerHTML='';
+
 SHAPES.forEach(shape=>{
-const item=document.createElement('div');item.className='cat-item';
-const grid=document.createElement('div');grid.className='mini-grid';drawMiniShape(grid,shape);
+const item=document.createElement('div');
+item.className='cat-item';
+
+const grid=document.createElement('div');
+grid.className='mini-grid';
+drawMiniShape(grid,shape);
+
 item.appendChild(grid);
-item.onclick=()=>{hand[activeSlot]=shape;activeSlot=(activeSlot+1)%3;bestPlan=null;renderSlots();renderBoard()};
+
+item.onclick=()=>{
+hand[activeSlot]=shape;
+activeSlot=(activeSlot+1)%3;
+bestPlan=null;
+renderSlots();
+renderBoard();
+};
+
 el.appendChild(item);
-});}
+});
+}
+
 function canPlace(b,s,r0,c0){
-for(let r=0;r<s.length;r++)for(let c=0;c<s[0].length;c++)if(s[r][c]){
+for(let r=0;r<s.length;r++){
+for(let c=0;c<s[0].length;c++){
+if(s[r][c]){
 const nr=r0+r,nc=c0+c;
 if(nr<0||nr>=8||nc<0||nc>=8||b[nr][nc])return false;
 }
+}
+}
 return true;
 }
+
 function placeAndClear(b,s,r0,c0){
-const nb=b.map(row=>[...row]),cells=[];
-for(let r=0;r<s.length;r++)for(let c=0;c<s[0].length;c++)if(s[r][c]){nb[r0+r][c0+c]=1;cells.push([r0+r,c0+c])}
+const nb=b.map(row=>[...row]);
+const cells=[];
+
+for(let r=0;r<s.length;r++){
+for(let c=0;c<s[0].length;c++){
+if(s[r][c]){
+nb[r0+r][c0+c]=1;
+cells.push([r0+r,c0+c]);
+}
+}
+}
+
 const rows=[],cols=[];
-for(let r=0;r<8;r++)if(nb[r].every(v=>v===1))rows.push(r);
-for(let c=0;c<8;c++){let ok=true;for(let r=0;r<8;r++)if(!nb[r][c])ok=false;if(ok)cols.push(c)}
+
+for(let r=0;r<8;r++){
+if(nb[r].every(v=>v===1))rows.push(r);
+}
+
+for(let c=0;c<8;c++){
+let ok=true;
+for(let r=0;r<8;r++){
+if(!nb[r][c])ok=false;
+}
+if(ok)cols.push(c);
+}
+
 rows.forEach(r=>nb[r].fill(0));
-cols.forEach(c=>{for(let r=0;r<8;r++)nb[r][c]=0});
+cols.forEach(c=>{
+for(let r=0;r<8;r++)nb[r][c]=0;
+});
+
 return{board:nb,cleared:rows.length+cols.length,cells};
 }
+
 function evaluateBoard(b){
 let empty=0,transitions=0,holes=0;
-for(let r=0;r<8;r++)for(let c=0;c<8;c++){
-if(!b[r][c]){empty++;let blocked=0;if(r===0||b[r-1][c])blocked++;if(r===7||b[r+1][c])blocked++;if(c===0||b[r][c-1])blocked++;if(c===7||b[r][c+1])blocked++;if(blocked===4)holes++}
+
+for(let r=0;r<8;r++){
+for(let c=0;c<8;c++){
+if(!b[r][c]){
+empty++;
+let blocked=0;
+if(r===0||b[r-1][c])blocked++;
+if(r===7||b[r+1][c])blocked++;
+if(c===0||b[r][c-1])blocked++;
+if(c===7||b[r][c+1])blocked++;
+if(blocked===4)holes++;
+}
+
 if(c<7&&b[r][c]!==b[r][c+1])transitions++;
 if(r<7&&b[r][c]!==b[r+1][c])transitions++;
 }
+}
+
 return empty*12-transitions*2.5-holes*18;
 }
+
 function solveBest(){
-const perms=[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+const perms=[
+[0,1,2],[0,2,1],[1,0,2],
+[1,2,0],[2,0,1],[2,1,0]
+];
+
 let bestScore=-Infinity,winner=null;
+
 for(const p of perms){
 const s0=hand[p[0]],s1=hand[p[1]],s2=hand[p[2]];
-for(let r0=0;r0<=8-s0.length;r0++)for(let c0=0;c0<=8-s0[0].length;c0++){
+
+for(let r0=0;r0<=8-s0.length;r0++){
+for(let c0=0;c0<=8-s0[0].length;c0++){
 if(!canPlace(board,s0,r0,c0))continue;
+
 const a=placeAndClear(board,s0,r0,c0);
-for(let r1=0;r1<=8-s1.length;r1++)for(let c1=0;c1<=8-s1[0].length;c1++){
+
+for(let r1=0;r1<=8-s1.length;r1++){
+for(let c1=0;c1<=8-s1[0].length;c1++){
 if(!canPlace(a.board,s1,r1,c1))continue;
+
 const b=placeAndClear(a.board,s1,r1,c1);
-for(let r2=0;r2<=8-s2.length;r2++)for(let c2=0;c2<=8-s2[0].length;c2++){
+
+for(let r2=0;r2<=8-s2.length;r2++){
+for(let c2=0;c2<=8-s2[0].length;c2++){
 if(!canPlace(b.board,s2,r2,c2))continue;
+
 const d=placeAndClear(b.board,s2,r2,c2);
 const score=evaluateBoard(d.board)+(a.cleared+b.cleared+d.cleared)*95;
-if(score>bestScore){bestScore=score;winner=[
+
+if(score>bestScore){
+bestScore=score;
+winner=[
 {slot:p[0],r:r0,c:c0,cleared:a.cleared,cells:a.cells},
 {slot:p[1],r:r1,c:c1,cleared:b.cleared,cells:b.cells},
 {slot:p[2],r:r2,c:c2,cleared:d.cleared,cells:d.cells}
-]}
-}}
-}}
-if(!winner){document.getElementById('statusText').textContent='Bu 3 blok için geçerli hamle bulunamadı!';bestPlan=null;renderBoard();return}
-bestPlan=winner;renderBoard();
-const list=document.getElementById('stepsList');list.innerHTML='';
+];
+}
+}
+}
+}
+}
+}
+}
+
+if(!winner){
+document.getElementById('statusText').textContent='Bu 3 blok için geçerli hamle bulunamadı!';
+bestPlan=null;
+renderBoard();
+return;
+}
+
+bestPlan=winner;
+renderBoard();
+
+const list=document.getElementById('stepsList');
+list.innerHTML='';
 const cols='ABCDEFGH';
+
 winner.forEach((s,i)=>{
-const div=document.createElement('div');div.className='step-item';
+const div=document.createElement('div');
+div.className='step-item';
 div.innerHTML=`<span><b>${i+1}. Adım:</b> Blok ${s.slot+1} → <b>${cols[s.c]}${s.r+1}</b></span><span>${s.cleared>0?'+'+s.cleared+' Satır/Sütun':''}</span>`;
 list.appendChild(div);
 });
+
 document.getElementById('solutionCard').classList.remove('hidden');
 document.getElementById('statusText').textContent='En yüksek puanlı 3 hamle hesaplandı!';
 }
+
 function applySolution(){
 if(!bestPlan)return;
-bestPlan.forEach(s=>{board=placeAndClear(board,hand[s.slot],s.r,s.c).board});
-bestPlan=null;document.getElementById('solutionCard').classList.add('hidden');renderBoard();
+
+bestPlan.forEach(s=>{
+board=placeAndClear(board,hand[s.slot],s.r,s.c).board;
+});
+
+bestPlan=null;
+document.getElementById('solutionCard').classList.add('hidden');
+renderBoard();
 document.getElementById('statusText').textContent='Hamleler uygulandı. Yeni 3 bloğu seçin.';
 }
+
 function clearBoard(){
-board=Array.from({length:8},()=>Array(8).fill(0));bestPlan=null;
-document.getElementById('solutionCard').classList.add('hidden');renderBoard();
+board=Array.from({length:8},()=>Array(8).fill(0));
+bestPlan=null;
+document.getElementById('solutionCard').classList.add('hidden');
+renderBoard();
 }
 
-// EKRAN TARAMA
+// EKRAN TARAMA VE KALİBRASYON
+
 const scanCanvas=document.getElementById('scanCanvas');
 const ctx=scanCanvas.getContext('2d',{willReadFrequently:true});
 let loadedImg=null;
-let boardBox={x:.08,y:.24,w:.84,h:.47};
-const trayBox={x:.04,y:.66,w:.92,h:.25};
+
+// Portre oyun ekranı için başlangıç koordinatları.
+// Gerekirse aşağıdaki ayar kaydırıcılarından değiştirilebilir.
+let boardBox={x:.203,y:.359,w:.594,h:.265};
+let trayBox={x:.197,y:.633,w:.606,h:.164};
+
+const DEFAULT_BOARD={...boardBox};
+const DEFAULT_TRAY={...trayBox};
+
+const calFields=[
+['boardBox','x','Tahta X'],
+['boardBox','y','Tahta Y'],
+['boardBox','w','Tahta Genişlik'],
+['boardBox','h','Tahta Yükseklik'],
+['trayBox','x','Parça X'],
+['trayBox','y','Parça Y'],
+['trayBox','w','Parça Genişlik'],
+['trayBox','h','Parça Yükseklik']
+];
+
+function buildCalibrationControls(){
+const root=document.getElementById('calibrationControls');
+if(!root)return;
+
+root.innerHTML='';
+
+calFields.forEach(([box,key,label])=>{
+const wrap=document.createElement('label');
+wrap.className='cal-item';
+
+const title=document.createElement('b');
+title.textContent=label;
+
+const value=document.createElement('span');
+value.id=`cal-${box}-${key}-value`;
+
+const input=document.createElement('input');
+input.type='range';
+input.min='0';
+input.max='1';
+input.step='.005';
+input.value=(box==='boardBox'?boardBox[key]:trayBox[key]);
+
+input.oninput=()=>{
+(box==='boardBox'?boardBox:trayBox)[key]=Number(input.value);
+value.textContent=`${Math.round(Number(input.value)*100)}%`;
+drawScanOverlay();
+};
+
+value.textContent=`${Math.round(Number(input.value)*100)}%`;
+
+wrap.append(title,input,value);
+root.appendChild(wrap);
+});
+}
+
+function syncCalibrationControls(){
+buildCalibrationControls();
+}
+
+function resetCalibration(){
+boardBox={...DEFAULT_BOARD};
+trayBox={...DEFAULT_TRAY};
+syncCalibrationControls();
+drawScanOverlay();
+}
+
+function autoFitCalibration(){
+boardBox={x:.203,y:.359,w:.594,h:.265};
+trayBox={x:.197,y:.633,w:.606,h:.164};
+syncCalibrationControls();
+drawScanOverlay();
+}
 
 function drawScanOverlay(){
 ctx.clearRect(0,0,scanCanvas.width,scanCanvas.height);
-if(loadedImg)ctx.drawImage(loadedImg,0,0,scanCanvas.width,scanCanvas.height);
-const bx=boardBox.x*scanCanvas.width,by=boardBox.y*scanCanvas.height;
-const bw=boardBox.w*scanCanvas.width,bh=boardBox.h*scanCanvas.height;
-ctx.strokeStyle='#38bdf8';ctx.lineWidth=Math.max(3,scanCanvas.width*.005);
+
+if(loadedImg){
+ctx.drawImage(loadedImg,0,0,scanCanvas.width,scanCanvas.height);
+}
+
+const bx=boardBox.x*scanCanvas.width;
+const by=boardBox.y*scanCanvas.height;
+const bw=boardBox.w*scanCanvas.width;
+const bh=boardBox.h*scanCanvas.height;
+
+ctx.save();
+ctx.strokeStyle='#38bdf8';
+ctx.lineWidth=Math.max(3,scanCanvas.width*.004);
 ctx.strokeRect(bx,by,bw,bh);
 
-// Alt blok tarama alanı
-const tx=trayBox.x*scanCanvas.width,ty=trayBox.y*scanCanvas.height;
-const tw=trayBox.w*scanCanvas.width,th=trayBox.h*scanCanvas.height;
-ctx.strokeStyle='#f59e0b';ctx.lineWidth=Math.max(3,scanCanvas.width*.005);
-ctx.strokeRect(tx,ty,tw,th);
+// Tahtanın 8x8 hücre çizgileri
+for(let i=1;i<8;i++){
 ctx.beginPath();
-ctx.moveTo(tx+tw/3,ty);ctx.lineTo(tx+tw/3,ty+th);
-ctx.moveTo(tx+tw*2/3,ty);ctx.lineTo(tx+tw*2/3,ty+th);
+ctx.moveTo(bx+bw*i/8,by);
+ctx.lineTo(bx+bw*i/8,by+bh);
+ctx.moveTo(bx,by+bh*i/8);
+ctx.lineTo(bx+bw,by+bh*i/8);
 ctx.stroke();
 }
+
+const tx=trayBox.x*scanCanvas.width;
+const ty=trayBox.y*scanCanvas.height;
+const tw=trayBox.w*scanCanvas.width;
+const th=trayBox.h*scanCanvas.height;
+
+ctx.strokeStyle='#f59e0b';
+ctx.lineWidth=Math.max(3,scanCanvas.width*.004);
+ctx.strokeRect(tx,ty,tw,th);
+
+// Üç parçanın ayrı tarama bölümleri
+for(let i=1;i<3;i++){
+ctx.beginPath();
+ctx.moveTo(tx+tw*i/3,ty);
+ctx.lineTo(tx+tw*i/3,ty+th);
+ctx.stroke();
+}
+
+ctx.restore();
+}
+
 function loadScreenshot(e){
-const file=e.target.files[0];if(!file)return;
+const file=e.target.files?.[0];
+if(!file)return;
+
 const img=new Image();
-img.onload=()=>{loadedImg=img;scanCanvas.width=img.naturalWidth||img.width;scanCanvas.height=img.naturalHeight||img.height;drawScanOverlay()};
+
+img.onload=()=>{
+loadedImg=img;
+scanCanvas.width=img.naturalWidth||img.width;
+scanCanvas.height=img.naturalHeight||img.height;
+drawScanOverlay();
+
+document.getElementById('statusText').textContent=
+`Görüntü yüklendi (${scanCanvas.width}×${scanCanvas.height}). Çerçeveleri hizalayın.`;
+};
+
+img.onerror=()=>{
+alert('Görüntü açılamadı. Başka bir ekran görüntüsü deneyin.');
+};
+
 img.src=URL.createObjectURL(file);
 }
+
 async function startScreenCapture(){
 try{
 const ScreenCapture=window.Capacitor?.Plugins?.ScreenCapture;
-if(!ScreenCapture){alert('Android ekran yakalama eklentisi bulunamadı. APK yeniden derlenmelidir.');return}
-if(window._screenListener){try{await ScreenCapture.removeListener('screenFrame',window._screenListener)}catch(e){}}
+
+if(!ScreenCapture){
+alert('Android ekran yakalama eklentisi bulunamadı. APK yeniden derlenmelidir.');
+return;
+}
+
+if(window._screenListener){
+try{
+await window._screenListener.remove();
+}catch(e){}
+}
+
 window._screenListener=await ScreenCapture.addListener('screenFrame',event=>{
 if(!event.image)return;
+
 const img=new Image();
-img.onload=()=>{loadedImg=img;scanCanvas.width=img.naturalWidth||img.width;scanCanvas.height=img.naturalHeight||img.height;drawScanOverlay()};
+
+img.onload=()=>{
+loadedImg=img;
+scanCanvas.width=img.naturalWidth||img.width;
+scanCanvas.height=img.naturalHeight||img.height;
+drawScanOverlay();
+};
+
 img.src='data:image/jpeg;base64,'+event.image;
 });
+
 await ScreenCapture.start();
-}catch(err){alert('Ekran paylaşımı başlatılamadı: '+err.message)}
+
+document.getElementById('statusText').textContent=
+'Canlı ekran paylaşımı başladı. Oyun ekranını açıp geri dönün.';
+
+}catch(err){
+alert('Ekran paylaşımı başlatılamadı: '+(err?.message||err));
+}
 }
 
-// HAYALET EKRAN
-async function showGhostOverlay(){
-try{
-const overlay=window.Capacitor?.Plugins?.Overlay;
-if(!overlay){alert('Hayalet ekran eklentisi bulunamadı. APK yeniden derlenmelidir.');return}
-if(!bestPlan||!bestPlan.length){alert('Önce En İyi Hamleyi Bul butonuna basın.');return}
-await overlay.requestPermission();
-const cells=[];
-bestPlan.forEach((s,i)=>s.cells.forEach(([r,c])=>cells.push([r,c,i+1])));
-await overlay.show({cells:JSON.stringify(cells)});
-document.getElementById('statusText').textContent='Hayalet hamleler oyun ekranında gösteriliyor.';
-}catch(err){alert('Hayalet ekran hatası: '+err.message)}
-}
-async function hideGhostOverlay(){
-try{
-const overlay=window.Capacitor?.Plugins?.Overlay;
-if(!overlay){alert('Hayalet ekran eklentisi bulunamadı.');return}
-await overlay.hide();document.getElementById('statusText').textContent='Hayalet ekran kapatıldı.';
-}catch(err){alert('Hayalet ekran kapatılamadı: '+err.message)}
+// BLOK RENK ALGILAMA
+
+function isGameBlockColor(r,g,b){
+const blue=
+b>100 &&
+g>95 &&
+b>r*1.12 &&
+g>r*1.08 &&
+(b-r)>35;
+
+const orange=
+r>135 &&
+g>55 &&
+r>g*1.18 &&
+g>b*1.12 &&
+(r-b)>45;
+
+return blue||orange;
 }
 
-// YENİ OTOMATİK PARÇA ALGILAMA
+function trimShape(matrix){
+let top=matrix.findIndex(row=>row.some(Boolean));
+if(top<0)return null;
+
+let bottom=matrix.length-1;
+
+while(bottom>=top&&!matrix[bottom].some(Boolean)){
+bottom--;
+}
+
+let left=matrix[0].length;
+let right=-1;
+
+for(let r=top;r<=bottom;r++){
+for(let c=0;c<matrix[r].length;c++){
+if(matrix[r][c]){
+left=Math.min(left,c);
+right=Math.max(right,c);
+}
+}
+}
+
+return matrix.slice(top,bottom+1).map(row=>row.slice(left,right+1));
+}
+
+function sameShape(a,b){
+return a.length===b.length &&
+a[0]?.length===b[0]?.length &&
+a.every((row,r)=>row.every((v,c)=>v===b[r][c]));
+}
+
+function matchDetectedShape(detected){
+const clean=trimShape(detected);
+if(!clean)return null;
+
+return SHAPES.find(shape=>sameShape(trimShape(shape),clean))||null;
+}
+
+// ALTTAKİ ÜÇ PARÇAYI ALGILA
+
 function detectPieceInSlot(imageData,width,height,slotIndex){
-const slotW=trayBox.w*width/3;
-const x0=Math.floor(trayBox.x*width+slotIndex*slotW);
-const x1=Math.floor(x0+slotW);
-const y0=Math.floor(trayBox.y*height);
-const y1=Math.floor((trayBox.y+trayBox.h)*height);
-const scale=2,sw=Math.ceil((x1-x0)/scale),sh=Math.ceil((y1-y0)/scale);
-const mask=new Uint8Array(sw*sh);
 
-for(let gy=0;gy<sh;gy++)for(let gx=0;gx<sw;gx++){
-const x=x0+gx*scale,y=y0+gy*scale,i=(y*width+x)*4;
-const r=imageData.data[i],g=imageData.data[i+1],b=imageData.data[i+2];
-const max=Math.max(r,g,b),min=Math.min(r,g,b);
-const brightness=(r+g+b)/3,saturation=max===0?0:(max-min)/max;
-if(brightness>105&&saturation>.16)mask[gy*sw+gx]=1;
+const x0=Math.max(
+0,
+Math.floor(trayBox.x*width+slotIndex*trayBox.w*width/3)
+);
+
+const x1=Math.min(
+width,
+Math.floor(trayBox.x*width+(slotIndex+1)*trayBox.w*width/3)
+);
+
+const y0=Math.max(0,Math.floor(trayBox.y*height));
+const y1=Math.min(height,Math.floor((trayBox.y+trayBox.h)*height));
+
+const sw=x1-x0;
+const sh=y1-y0;
+
+if(sw<20||sh<20)return null;
+
+const mask=new Uint8Array(sw*sh);
+const colSum=new Uint32Array(sw);
+const rowSum=new Uint32Array(sh);
+
+for(let y=0;y<sh;y++){
+for(let x=0;x<sw;x++){
+
+const i=((y0+y)*width+x0+x)*4;
+
+if(isGameBlockColor(
+imageData.data[i],
+imageData.data[i+1],
+imageData.data[i+2]
+)){
+mask[y*sw+x]=1;
+colSum[x]++;
+rowSum[y]++;
 }
-const visited=new Uint8Array(mask.length),components=[];
-for(let start=0;start<mask.length;start++){
-if(!mask[start]||visited[start])continue;
-const queue=[start];visited[start]=1;
-let minX=sw,minY=sh,maxX=0,maxY=0,count=0;
-for(let q=0;q<queue.length;q++){
-const idx=queue[q],x=idx%sw,y=Math.floor(idx/sw);count++;
-minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);
-for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-const nx=x+dx,ny=y+dy;if(nx<0||nx>=sw||ny<0||ny>=sh)continue;
-const ni=ny*sw+nx;if(mask[ni]&&!visited[ni]){visited[ni]=1;queue.push(ni)}
-}}
-if(count>=8)components.push({x:(minX+maxX)/2,y:(minY+maxY)/2,w:maxX-minX+1,h:maxY-minY+1,count});
 }
-if(!components.length)return null;
-const largest=Math.max(...components.map(c=>c.count));
-const valid=components.filter(c=>c.count>=Math.max(8,largest*.08));
-if(!valid.length||valid.length>25)return null;
-const widths=valid.map(c=>c.w*scale).sort((a,b)=>a-b);
-const heights=valid.map(c=>c.h*scale).sort((a,b)=>a-b);
-const cellSize=(widths[Math.floor(widths.length/2)]+heights[Math.floor(heights.length/2)])/2;
-if(cellSize<5)return null;
-const minX=Math.min(...valid.map(c=>c.x*scale)),minY=Math.min(...valid.map(c=>c.y*scale));
-const cells=[];
-valid.forEach(c=>{
-const col=Math.round((c.x*scale-minX)/cellSize),row=Math.round((c.y*scale-minY)/cellSize);
-if(row>=0&&row<5&&col>=0&&col<5&&!cells.some(p=>p.r===row&&p.c===col))cells.push({r:row,c:col});
-});
-if(!cells.length||cells.length>25)return null;
-const rows=Math.max(...cells.map(p=>p.r))+1,cols=Math.max(...cells.map(p=>p.c))+1;
-const matrix=Array.from({length:rows},()=>Array(cols).fill(0));
-cells.forEach(p=>matrix[p.r][p.c]=1);
+}
+
+// Renkli piksellerin satır ve sütun izdüşümleri
+const smoothRuns=(values,threshold)=>{
+const active=values.map(v=>v>=threshold);
+const runs=[];
+let start=-1;
+
+for(let i=0;i<=active.length;i++){
+if(i<active.length&&active[i]){
+if(start<0)start=i;
+}else if(start>=0){
+runs.push([start,i-1]);
+start=-1;
+}
+}
+
+// Küçük kesintileri birleştir
+for(let i=runs.length-1;i>0;i--){
+if(runs[i][0]-runs[i-1][1]<=2){
+runs[i-1][1]=runs[i][1];
+runs.splice(i,1);
+}
+}
+
+return runs.filter(([a,b])=>b-a+1>=4);
+};
+
+const xRuns=smoothRuns(colSum,Math.max(3,Math.floor(sh*.055)));
+const yRuns=smoothRuns(rowSum,Math.max(3,Math.floor(sw*.055)));
+
+if(!xRuns.length||!yRuns.length||xRuns.length>5||yRuns.length>5){
+return null;
+}
+
+const matrix=Array.from(
+{length:yRuns.length},
+()=>Array(xRuns.length).fill(0)
+);
+
+for(let r=0;r<yRuns.length;r++){
+for(let c=0;c<xRuns.length;c++){
+
+const [xa,xb]=xRuns[c];
+const [ya,yb]=yRuns[r];
+
+let count=0;
+const total=(xb-xa+1)*(yb-ya+1);
+
+for(let y=ya;y<=yb;y++){
+for(let x=xa;x<=xb;x++){
+count+=mask[y*sw+x];
+}
+}
+
+matrix[r][c]=count/total>.12?1:0;
+}
+}
+
 return matchDetectedShape(matrix);
 }
-function matchDetectedShape(detected){
-const key=s=>s.map(row=>row.join('')).join('/');
-return SHAPES.find(s=>key(s)===key(detected))||null;
-}
-function detectAllThreePieces(){
-if(!loadedImg){alert('Önce ekran görüntüsü yükleyin veya canlı ekran okumayı başlatın.');return false}
-ctx.drawImage(loadedImg,0,0,scanCanvas.width,scanCanvas.height);
-const imageData=ctx.getImageData(0,0,scanCanvas.width,scanCanvas.height);
+
+function detectAllThreePieces(imageData){
+
 const detected=[];
+
 for(let i=0;i<3;i++){
-const shape=detectPieceInSlot(imageData,scanCanvas.width,scanCanvas.height,i);
+
+const shape=detectPieceInSlot(
+imageData,
+scanCanvas.width,
+scanCanvas.height,
+i
+);
+
 if(!shape){
-document.getElementById('statusText').textContent=`Blok ${i+1} algılanamadı. Turuncu alanı kontrol edin.`;
-drawScanOverlay();return false;
+document.getElementById('statusText').textContent=
+`Blok ${i+1} algılanamadı. Turuncu çerçeveyi o bloğu tamamen kapsayacak şekilde ayarlayın.`;
+
+return false;
 }
+
 detected.push(shape);
 }
-hand=detected;bestPlan=null;renderSlots();renderBoard();
-document.getElementById('statusText').textContent='Üç blok algılandı! Hamle hesaplanabilir.';
+
+hand=detected;
+bestPlan=null;
+renderSlots();
+renderBoard();
+
 return true;
 }
 
-// TAHTA OKUMA
+// OYUN TAHTASINI OKU VE ÇÖZ
+
 function analyzeScreenAndSolve(){
-if(!loadedImg){alert('Önce ekran görüntüsü seçin veya canlı ekran okumayı başlatın.');return}
-ctx.drawImage(loadedImg,0,0,scanCanvas.width,scanCanvas.height);
-const bx=boardBox.x*scanCanvas.width,by=boardBox.y*scanCanvas.height;
-const cw=boardBox.w*scanCanvas.width/8,ch=boardBox.h*scanCanvas.height/8;
-for(let r=0;r<8;r++)for(let c=0;c<8;c++){
-const px=Math.floor(bx+c*cw+cw*.5),py=Math.floor(by+r*ch+ch*.5);
-const data=ctx.getImageData(px,py,1,1).data;
-const brightness=(data[0]+data[1]+data[2])/3;
-board[r][c]=brightness>75?1:0;
+
+if(!loadedImg){
+alert('Önce ekran görüntüsü seçin veya canlı ekran okumayı başlatın.');
+return;
 }
-if(!detectAllThreePieces())return;
-bestPlan=null;drawScanOverlay();switchTab('solver');solveBest();
+
+ctx.drawImage(
+loadedImg,
+0,
+0,
+scanCanvas.width,
+scanCanvas.height
+);
+
+const imageData=ctx.getImageData(
+0,
+0,
+scanCanvas.width,
+scanCanvas.height
+);
+
+const bx=boardBox.x*scanCanvas.width;
+const by=boardBox.y*scanCanvas.height;
+const cw=boardBox.w*scanCanvas.width/8;
+const ch=boardBox.h*scanCanvas.height/8;
+
+let occupied=0;
+
+for(let r=0;r<8;r++){
+for(let c=0;c<8;c++){
+
+let hits=0;
+let total=0;
+
+// Hücre merkezinin çevresinden 3x3 örnek al
+for(const oy of [.36,.50,.64]){
+for(const ox of [.36,.50,.64]){
+
+const px=Math.floor(bx+(c+ox)*cw);
+const py=Math.floor(by+(r+oy)*ch);
+const i=(py*scanCanvas.width+px)*4;
+
+if(isGameBlockColor(
+imageData.data[i],
+imageData.data[i+1],
+imageData.data[i+2]
+)){
+hits++;
 }
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+total++;
+}
+}
+
+board[r][c]=hits>=3?1:0;
+
+if(board[r][c])occupied++;
+}
+}
+
+if(!detectAllThreePieces(imageData)){
+drawScanOverlay();
+return;
+}
+
+bestPlan=null;
+drawScanOverlay();
+switchTab('solver');
+solveBest();
+
+document.getElementById('statusText').textContent=
+`Tahta okundu: ${occupied}/64 dolu hücre. Üç parça algılandı.`;
+}
+
+// HAYALET EKRAN
+
+async function showGhostOverlay(){
+
+try{
+
+const overlay=window.Capacitor?.Plugins?.Overlay;
+
+if(!overlay){
+alert('Hayalet ekran eklentisi bulunamadı. APK yeniden derlenmelidir.');
+return;
+}
+
+if(!bestPlan||!bestPlan.length){
+alert('Önce En İyi Hamleyi Bul butonuna basın.');
+return;
+}
+
+await overlay.requestPermission();
+
+const cells=[];
+
+bestPlan.forEach((s,i)=>{
+s.cells.forEach(([r,c])=>{
+cells.push([r,c,i+1]);
+});
+});
+
+await overlay.show({
+cells:JSON.stringify(cells)
+});
+
+document.getElementById('statusText').textContent=
+'Hayalet hamleler oyun ekranında gösteriliyor.';
+
+}catch(err){
+alert('Hayalet ekran hatası: '+err.message);
+}
+}
+
+async function hideGhostOverlay(){
+
+try{
+
+const overlay=window.Capacitor?.Plugins?.Overlay;
+
+if(!overlay){
+alert('Hayalet ekran eklentisi bulunamadı.');
+return;
+}
+
+await overlay.hide();
+
+document.getElementById('statusText').textContent=
+'Hayalet ekran kapatıldı.';
+
+}catch(err){
+alert('Hayalet ekran kapatılamadı: '+err.message);
+}
+}
+
+// SERVICE WORKER
+
+if('serviceWorker' in navigator){
+navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
 init();
+buildCalibrationControls();
+
 </script>
 </body>
 </html>
