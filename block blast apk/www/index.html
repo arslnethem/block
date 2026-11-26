@@ -784,12 +784,14 @@ start=-1;
 }
 }
 
-// Küçük kesintileri birleştir
+// Blok hücreleri arasındaki küçük boşlukları birleştir
 for(let i=runs.length-1;i>0;i--){
-if(runs[i][0]-runs[i-1][1]<=2){
-runs[i-1][1]=runs[i][1];
-runs.splice(i,1);
-}
+    const gap = runs[i][0] - runs[i-1][1] - 1;
+
+    if(gap <= 8){
+        runs[i-1][1] = runs[i][1];
+        runs.splice(i,1);
+    }
 }
 
 return runs.filter(([a,b])=>b-a+1>=4);
