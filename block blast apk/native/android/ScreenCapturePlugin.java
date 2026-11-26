@@ -1,3 +1,4 @@
+package com.blockblast.aisolver;
 
 import android.content.Intent;
 import android.media.projection.MediaProjectionManager;
