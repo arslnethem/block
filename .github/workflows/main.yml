@@ -38,7 +38,7 @@ jobs:
       - name: Add Android platform
         run: cd "block blast apk" && npx cap add android
 
-      - name: Install native screen capture files
+      - name: Install native Android files
         run: |
           cd "block blast apk"
 
@@ -47,7 +47,13 @@ jobs:
 
           cp native/android/ScreenCapturePlugin.java "$PACKAGE_DIR/"
           cp native/android/ScreenCaptureService.java "$PACKAGE_DIR/"
+          cp native/android/OverlayPlugin.java "$PACKAGE_DIR/"
+          cp native/android/OverlayService.java "$PACKAGE_DIR/"
           cp native/android/MainActivity.java "$PACKAGE_DIR/"
+
+      - name: Configure Android manifest
+        run: |
+          cd "block blast apk"
 
           python3 - <<'PY'
           from pathlib import Path
@@ -57,30 +63,39 @@ jobs:
 
           permissions = [
               '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
-              '<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />'
+              '<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />',
+              '<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />'
           ]
 
           for permission in permissions:
               if permission not in content:
                   content = content.replace(
                       '<application',
-                      permission + '\n    <application',
+                      '    ' + permission + '\n    <application',
                       1
                   )
 
-          service = """
+          services = [
+              """
               <service
                   android:name="com.blockblast.aisolver.ScreenCaptureService"
                   android:exported="false"
                   android:foregroundServiceType="mediaProjection" />
-          """
+              """,
+              """
+              <service
+                  android:name="com.blockblast.aisolver.OverlayService"
+                  android:exported="false" />
+              """
+          ]
 
-          if "com.blockblast.aisolver.ScreenCaptureService" not in content:
-              content = content.replace(
-                  '</application>',
-                  service + '\n    </application>',
-                  1
-              )
+          for service in services:
+              if service.strip().split('"')[1] not in content:
+                  content = content.replace(
+                      '</application>',
+                      service + '\n    </application>',
+                      1
+                  )
 
           manifest.write_text(content)
           PY
@@ -88,14 +103,19 @@ jobs:
       - name: Verify native Java files
         run: |
           cd "block blast apk"
+
           echo "JAVA FILES:"
           find android/app/src/main/java -name "*.java"
-          echo "PLUGIN PACKAGE:"
-          head -n 5 android/app/src/main/java/com/blockblast/aisolver/ScreenCapturePlugin.java
-          echo "SERVICE PACKAGE:"
-          head -n 5 android/app/src/main/java/com/blockblast/aisolver/ScreenCaptureService.java
-          echo "MAIN ACTIVITY PACKAGE:"
-          head -n 5 android/app/src/main/java/com/blockblast/aisolver/MainActivity.java
+
+          echo "CHECK REQUIRED FILES:"
+          test -f android/app/src/main/java/com/blockblast/aisolver/ScreenCapturePlugin.java
+          test -f android/app/src/main/java/com/blockblast/aisolver/ScreenCaptureService.java
+          test -f android/app/src/main/java/com/blockblast/aisolver/OverlayPlugin.java
+          test -f android/app/src/main/java/com/blockblast/aisolver/OverlayService.java
+          test -f android/app/src/main/java/com/blockblast/aisolver/MainActivity.java
+
+          echo "MANIFEST:"
+          grep -E "SYSTEM_ALERT_WINDOW|ScreenCaptureService|OverlayService" android/app/src/main/AndroidManifest.xml
 
       - name: Sync Android
         run: cd "block blast apk" && npx cap sync android
