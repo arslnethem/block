@@ -146,11 +146,11 @@ Kaydırıcılar görüntüye göre ayarlanır.
 <button
   style="position:fixed;top:10px;left:10px;z-index:99999;background:red;color:white;padding:15px"
   onclick="alert(
-    'solveBest: ' + typeof solveBest +
-    '\nclearBoard: ' + typeof clearBoard +
-    '\nswitchTab: ' + typeof switchTab
+    'Script sayısı: ' + document.scripts.length +
+    '\nScript tipi: ' + (document.scripts[document.scripts.length-1].type || 'classic') +
+    '\nUygulama başlatıldı: ' + (window.__APP_SCRIPT_LOADED__ === true)
   )">
-  JAVASCRIPT TESTİ
+  SCRIPT TESTİ
 </button>
 </button>
 <nav class="bottom-nav">
@@ -159,6 +159,7 @@ Kaydırıcılar görüntüye göre ayarlanır.
 </nav>
 
 <script>
+  window.__APP_SCRIPT_LOADED__ = true;
 'use strict';
 
 const SHAPES=[
