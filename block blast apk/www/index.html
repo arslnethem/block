@@ -745,14 +745,22 @@ console.error('Canlı ekran durdurma hatası:',err);
 
 // BLOK RENK ALGILAMA
 
-function isGameBlockColor(r,g,b){
-const max=Math.max(r,g,b);
-const min=Math.min(r,g,b);
-const brightness=(r+g+b)/3;
-const saturation=max===0?0:(max-min)/max;
 
-return brightness>75&&max>105&&(max-min)>28&&saturation>0.18;
+function isGameBlockColor(r, g, b) {
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+
+    const brightness = (r + g + b) / 3;
+    const saturation = max === 0 ? 0 : (max - min) / max;
+
+    // Ahşap arka planı ve gölgeleri mümkün olduğunca ele.
+    if (brightness < 85 || max < 110) return false;
+    if (saturation < 0.62) return false;
+    if ((max - min) < 45) return false;
+
+    return true;
 }
+
 
 function trimShape(matrix){
 let top=matrix.findIndex(row=>row.some(Boolean));
