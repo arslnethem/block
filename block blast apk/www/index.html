@@ -52,6 +52,22 @@ button.warn{background:#f59e0b2e;color:#fbbf24;border-color:#f59e0b66}
 .cal-item{display:flex;flex-direction:column;gap:3px;font-size:.72rem;color:var(--muted)}
 .cal-item input{width:100%;accent-color:var(--accent)}
 </style>
+  <script>
+window.onerror = function(message, source, line, column, error) {
+    alert(
+        "JAVASCRIPT HATASI\n\n" +
+        "Mesaj: " + message +
+        "\nSatır: " + line +
+        "\nSütun: " + column +
+        "\nDosya: " + source
+    );
+    return false;
+};
+
+window.onunhandledrejection = function(event) {
+    alert("PROMISE HATASI: " + event.reason);
+};
+</script>
 </head>
 
 <body>
