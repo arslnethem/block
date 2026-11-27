@@ -385,12 +385,17 @@ if(r<7&&b[r][c]!==b[r+1][c])transitions++;
 return empty*12-transitions*2.5-holes*18;
 }
 
+
 /* DÜZELTİLMİŞ ÇÖZÜM ALGORİTMASI */
 
-function solveBest(){
-const perms = [
-        [0,1,2], [0,2,1], [1,0,2],
-        [1,2,0], [2,0,1], [2,1,0]
+function solveBest() {
+    const perms = [
+        [0, 1, 2],
+        [0, 2, 1],
+        [1, 0, 2],
+        [1, 2, 0],
+        [2, 0, 1],
+        [2, 1, 0]
     ];
 
     let bestScore = -Infinity;
@@ -421,7 +426,10 @@ const perms = [
                     }
 
                     const result = placeAndClear(
-                        currentBoard, shape, r, c
+                        currentBoard,
+                        shape,
+                        r,
+                        c
                     );
 
                     const step = {
@@ -467,7 +475,7 @@ const perms = [
         div.className = 'step-item';
 
         div.innerHTML =
-            `<span><b>${i+1}. Adım:</b> Blok ${s.slot+1} → <b>${cols[s.c]}${s.r+1}</b></span>
+            `<span><b>${i + 1}. Adım:</b> Blok ${s.slot + 1} → <b>${cols[s.c]}${s.r + 1}</b></span>
             <span>${s.cleared > 0 ? '+' + s.cleared + ' Satır/Sütun' : ''}</span>`;
 
         list.appendChild(div);
@@ -477,31 +485,6 @@ const perms = [
 
     document.getElementById('statusText').textContent =
         'En yüksek puanlı 3 hamle hesaplandı!';
-}
-
-if(!winner){
-document.getElementById('statusText').textContent='Bu 3 blok için geçerli hamle bulunamadı!';
-bestPlan=null;
-renderBoard();
-return;
-}
-
-bestPlan=winner;
-renderBoard();
-
-const list=document.getElementById('stepsList');
-list.innerHTML='';
-const cols='ABCDEFGH';
-
-winner.forEach((s,i)=>{
-const div=document.createElement('div');
-div.className='step-item';
-div.innerHTML=`<span><b>${i+1}. Adım:</b> Blok ${s.slot+1} → <b>${cols[s.c]}${s.r+1}</b></span><span>${s.cleared>0?'+'+s.cleared+' Satır/Sütun':''}</span>`;
-list.appendChild(div);
-});
-
-document.getElementById('solutionCard').classList.remove('hidden');
-document.getElementById('statusText').textContent='En yüksek puanlı 3 hamle hesaplandı!';
 }
 
 function applySolution(){
