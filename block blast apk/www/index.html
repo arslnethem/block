@@ -1042,42 +1042,6 @@ function analyzeScreenAndSolve(live = false) {
 }
 
 
-// Hücre merkezinin çevresinden 3x3 örnek al
-for(const oy of [.36,.50,.64]){
-for(const ox of [.36,.50,.64]){
-
-const px=Math.floor(bx+(c+ox)*cw);
-const py=Math.floor(by+(r+oy)*ch);
-const i=(py*scanCanvas.width+px)*4;
-
-if(isGameBlockColor(
-imageData.data[i],
-imageData.data[i+1],
-imageData.data[i+2]
-)){
-hits++;
-}
-
-total++;
-}
-}
-
-board[r][c]=hits>=3?1:0;
-
-if(board[r][c])occupied++;
-}
-}
-
-if(!detectAllThreePieces(imageData)){
-drawScanOverlay();
-return;
-}
-
-bestPlan=null;
-drawScanOverlay();
-switchTab('solver');
-solveBest();
-
 document.getElementById('statusText').textContent=
 `Tahta okundu: ${occupied}/64 dolu hücre. Üç parça algılandı.`;
 }
